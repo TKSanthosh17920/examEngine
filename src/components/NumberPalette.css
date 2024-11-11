@@ -1,0 +1,90 @@
+.number-palette {
+    right: 19px;
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    width: 300px;
+    height: 220px;
+    background: #dedede;
+    padding: 10px 10px;
+    top: 288px;
+    border-radius: 5px;
+  }
+  .titlenumber{
+    font-weight: 600;
+    font-size: small;
+    margin-top: 0px;
+    position: absolute;
+
+  }
+  .numbersection{
+    padding:0px 13px;
+    height: 135px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    top: 35px;
+    position: absolute;
+  }
+  .number-button {    
+    height: 22.4px;
+    width: 39.5px;
+    padding: 3px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 10px;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+ 
+  .number-button-ref {
+    width: 37px;
+    height: 23px;
+    padding: 3px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin: 5px 10px;
+    cursor: pointer;
+    font-size: 10px;
+  }
+  
+  .number-button.active {
+    background-color: #007bff !important;
+    color: #fff;
+  }
+  
+  .number-button.answered,  .number-button-ref.answered {
+    background-color: #28a745;
+    color: #fff;
+  }
+  
+  .number-button:hover {
+    background-color: #e0e0e0;
+
+  }
+  
+ .answered.tagged,.taganswered{
+    background-color: purple  ;
+    color: white;
+  }
+  .tagged{
+    background-color: orange  ;
+    color: white;
+  }
+
+  .unattempt{
+    background-color: white;
+  }
+
+  .calc-div{
+    position: absolute;
+    right: 10px;
+    top: 5px;
+  }
+  .divcalc{
+    width: 100px;
+    background: red;
+    display: contents;
+  }
