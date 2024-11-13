@@ -11,6 +11,7 @@ import ChangeMedium from './ChangeMedium';
 import BulkTimeExtension from './BulkTimeExtension';
 import GraceTimeExtension from './GraceTimeExtension';
 import ImageDownload from './ImageDownload';
+import DBPatch from './DBPatch';
 
 
 
@@ -122,17 +123,21 @@ const ReportTable = ({ type, onReportSelect }) => {
           <div className="popup-content" style={{overflow:"auto"}}>
             <span className="close-btn" onClick={handleClosePopup}>&times;</span>
             <h4>{selectedReport.name}</h4>
+            {/* Exam Reports */}
                 {type == 'exam' && selectedReport.id == 1 && <AttendanceReport />}
                 {type == 'exam' && selectedReport.id == 2 && <IncompleteReport />}
                 {type == 'exam' && selectedReport.id == 3 && <CandidateReport />}
                 {type == 'exam' && selectedReport.id == 4 && <TimejustificationReport />}
                 {type == 'exam' && selectedReport.id == 5 && <CandidateDurationReport />}
                 {type == 'exam' && selectedReport.id == 6 && <TrackingfeedReport />} 
+
+            {/* Miscellaneous */}
                 {type == 'miscellaneous' && selectedReport.id == 1 && <ExtendBulkTime />}
                 {type == 'miscellaneous' && selectedReport.id == 2 && <ChangeMedium />}
                 {type == 'miscellaneous' && selectedReport.id == 6 && <BulkTimeExtension />}
                 {type == 'miscellaneous' && selectedReport.id == 8 && <GraceTimeExtension />}
                 {type == 'miscellaneous' && selectedReport.id == 4 && <ImageDownload />}
+                {type == 'miscellaneous' && selectedReport.id == 5 && <DBPatch />}
 
           </div>
         </div>

@@ -33,13 +33,13 @@ const get_updated_pwd = (pwd, arValue) => {
 
 const centreAndServerNo = () => {
   return new Promise((resolve, reject) => {
-    const selAutoFeed = "select center_code, serverno from autofeed";
+    const selAutoFeed = "select centre_code, serverno from qp_download";
     db.query(selAutoFeed, (err, rowsSelAutoFeed) => {
       if (err) {
         console.error("Error querying the database:", err);
         return reject("Internal Server Error");
       }const result = {
-      center_code : rowsSelAutoFeed[0].center_code,
+      centre_code : rowsSelAutoFeed[0].centre_code,
       serverno : rowsSelAutoFeed[0].serverno,
     }
       return resolve(result);

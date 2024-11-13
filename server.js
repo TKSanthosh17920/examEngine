@@ -16,6 +16,7 @@ const FormData = require("form-data");
 const bcrypt = require("bcrypt");
 const archiver = require("archiver");
 const { decode } = require("html-entities");
+const fetch = require("node-fetch");
 require("dotenv").config(); // For environment variables
 const utils = require("./utils");
 const { arValue, timeValue, biometricValue } = require("./Constants");
@@ -100,6 +101,8 @@ app.use(bodyParser.json());
 const users = [
   { username: "admin", password: "password123", serialnumber: "6CD338GLL1" },
   { username: "110086D", password: "admin", serialnumber: "5CD311G1F5" },
+  { username: "854306A", password: "admin", serialnumber: "5CD311G1F5" },
+
 ];
 
 // Set a value in Memcached
@@ -1526,19 +1529,19 @@ app.get(
     console.log("centreCode:", centreCode);
 
     // const incompleteCandidatesQuery = `
-    //     SELECT 
-    //         a.question_paper_no AS questionPaperNo, 
-    //         a.membership_no AS membershipNo, 
-    //         a.exam_code AS examCode, 
-    //         a.subject_code AS subjectCode, 
-    //         c.pass_mark AS passMark, 
-    //         c.roundoff_score AS roundoff_score, 
+    //     SELECT
+    //         a.question_paper_no AS questionPaperNo,
+    //         a.membership_no AS membershipNo,
+    //         a.exam_code AS examCode,
+    //         a.subject_code AS subjectCode,
+    //         c.pass_mark AS passMark,
+    //         c.roundoff_score AS roundoff_score,
     //         c.grace_mark AS graceMark,
     //         c.subject_duration AS timeTaken
     //     FROM iib_candidate_test AS a
     //     JOIN iib_candidate_iway AS b ON a.subject_code = b.subject_code
     //     JOIN iib_exam_subjects AS c ON c.subject_code = b.subject_code
-    //     WHERE a.test_status = 'IC' AND b.zone_code = ? 
+    //     WHERE a.test_status = 'IC' AND b.zone_code = ?
     //     GROUP BY a.test_id`;
 
     try {
@@ -1604,8 +1607,8 @@ app.get(
       //         console.log("Zip file name:", zipFileName);
 
       //         // Insert summary into database
-      //         const insertSummaryQuery = `INSERT INTO batchwise_closure_summary 
-      //                       (exam_date, centre_code, serverno, closure_batch_time, closure_batch_file, closure_batch_status, serial_no, updated_on, added_on, ip_address) 
+      //         const insertSummaryQuery = `INSERT INTO batchwise_closure_summary
+      //                       (exam_date, centre_code, serverno, closure_batch_time, closure_batch_file, closure_batch_status, serial_no, updated_on, added_on, ip_address)
       //                       VALUES ('2024-09-05', ?, 'a', ?, ?, 'I', ? , NOW(), NOW(), ?)`;
       //         await queryAsync(insertSummaryQuery, [
       //           centreCode,
@@ -1666,60 +1669,60 @@ app.get(
       //       // Continue processing other candidates even if one fails
       //     }
       //   }
-      // } 
+      // }
       // else {
-        // Handle case when no incomplete candidates are found
-        // console.log("No incomplete candidates found, merging files...");
-        const zipFileName = await mergeAndZipFiles(centreCode, serialNumber);
+      // Handle case when no incomplete candidates are found
+      // console.log("No incomplete candidates found, merging files...");
+      const zipFileName = await mergeAndZipFiles(centreCode, serialNumber);
 
-        const insertSummaryQuery = `INSERT INTO batchwise_closure_summary 
+      const insertSummaryQuery = `INSERT INTO batchwise_closure_summary 
                 (exam_date, centre_code, serverno, closure_batch_time, closure_batch_file, closure_batch_status, serial_no, updated_on, added_on, ip_address) 
                 VALUES ('2024-09-05', ?, 'a', ?, ?, 'I', ? , NOW(), NOW(), ?)`;
-        await queryAsync(insertSummaryQuery, [
-          centreCode,
-          batchId,
-          zipFileName,
-          serialNumber,
-          hostIp,
-        ]);
+      await queryAsync(insertSummaryQuery, [
+        centreCode,
+        batchId,
+        zipFileName,
+        serialNumber,
+        hostIp,
+      ]);
 
-        const zipFilePath = path.join("C:\\pro\\itest\\feed", zipFileName);
-        if (fs.existsSync(zipFilePath)) {
-          const form = new FormData();
-          form.append("feedFile", fs.createReadStream(zipFilePath));
+      const zipFilePath = path.join("C:\\pro\\itest\\feed", zipFileName);
+      if (fs.existsSync(zipFilePath)) {
+        const form = new FormData();
+        form.append("feedFile", fs.createReadStream(zipFilePath));
 
-          const { default: fetch } = await import("node-fetch");
-          const response = await fetch(
-            "https://demo70.sifyitest.com/livedata/upload.php",
-            {
-              method: "POST",
-              body: form,
-              headers: form.getHeaders(),
-            }
-          );
-
-          if (!response.ok) {
-            const responseBody = await response.text();
-            throw new Error(
-              `Failed to send zip file ${zipFileName}. Status: ${response.status}, Response: ${responseBody}`
-            );
+        const { default: fetch } = await import("node-fetch");
+        const response = await fetch(
+          "https://demo70.sifyitest.com/livedata/upload.php",
+          {
+            method: "POST",
+            body: form,
+            headers: form.getHeaders(),
           }
+        );
 
-          console.log(`File ${zipFileName} sent successfully.`);
-
-          const updateSummaryQuery = `UPDATE batchwise_closure_summary SET closure_batch_status = 'U' WHERE closure_batch_file = ?`;
-          await queryAsync(updateSummaryQuery, [zipFileName]);
-
-          res.status(200).json({
-            message:
-              "Batch closure processed successfully with files merged, zipped, sent, and status updated",
-            incompleteCandidatesCount: 0,
-            zipFileName,
-          });
-        } else {
-          console.log(`File ${zipFileName} does not exist.`);
-          res.status(500).json({ error: "Merged file does not exist" });
+        if (!response.ok) {
+          const responseBody = await response.text();
+          throw new Error(
+            `Failed to send zip file ${zipFileName}. Status: ${response.status}, Response: ${responseBody}`
+          );
         }
+
+        console.log(`File ${zipFileName} sent successfully.`);
+
+        const updateSummaryQuery = `UPDATE batchwise_closure_summary SET closure_batch_status = 'U' WHERE closure_batch_file = ?`;
+        await queryAsync(updateSummaryQuery, [zipFileName]);
+
+        res.status(200).json({
+          message:
+            "Batch closure processed successfully with files merged, zipped, sent, and status updated",
+          incompleteCandidatesCount: 0,
+          zipFileName,
+        });
+      } else {
+        console.log(`File ${zipFileName} does not exist.`);
+        res.status(500).json({ error: "Merged file does not exist" });
+      }
       // }
     } catch (err) {
       console.error("Error retrieving incomplete candidates:", err);
@@ -1737,19 +1740,22 @@ app.get(
     console.log("serialNumber:", serialNumber);
     console.log("centreCode:", centreCode);
 
-    let allUniqueTestIds=[];
+    let allUniqueTestIds = [];
 
-    const getMaxTestId = "SELECT MAX(test_id) as max FROM iib_candidate_test GROUP BY membership_no, exam_code, subject_code";
+    const getMaxTestId =
+      "SELECT MAX(test_id) as max FROM iib_candidate_test GROUP BY membership_no, exam_code, subject_code";
     const maxTestid = await queryAsync(getMaxTestId);
-    for(const row of maxTestid){
-      const getUniqueTestid = "SELECT test_id FROM iib_candidate_test WHERE test_id = ? AND test_status  = 'IC'";
-      const uniqueTestId = await queryAsync(getUniqueTestid,[row.max])
-     if (uniqueTestId.length > 0) { // Check if result is not empty
+    for (const row of maxTestid) {
+      const getUniqueTestid =
+        "SELECT test_id FROM iib_candidate_test WHERE test_id = ? AND test_status  = 'IC'";
+      const uniqueTestId = await queryAsync(getUniqueTestid, [row.max]);
+      if (uniqueTestId.length > 0) {
+        // Check if result is not empty
         console.log(uniqueTestId[0].test_id);
         allUniqueTestIds.push(uniqueTestId[0].test_id);
+      }
     }
-    }
-    console.log(allUniqueTestIds)
+    console.log(allUniqueTestIds);
 
     const incompleteCandidatesQuery = `
         SELECT 
@@ -1770,9 +1776,9 @@ app.get(
     try {
       // Fetch incomplete candidates
       const incompleteCandidates = await queryAsync(incompleteCandidatesQuery, [
-        allUniqueTestIds
+        allUniqueTestIds,
       ]);
-      console.log(incompleteCandidates.length)
+      console.log(incompleteCandidates.length);
       // return false;
       if (incompleteCandidates.length > 0) {
         let remainingCandidates = incompleteCandidates.length;
@@ -4832,7 +4838,7 @@ app.get("/api/validate-password", (req, res) => {
 
 app.get("/download-file/:status", async (req, res) => {
   const status = req.params.status;
-  const { centerCode, serverNo } = utils.centreAndServerNo();
+  const { centreCode, serverNo } = utils.centreAndServerNo();
   // const batch = req.params.batch;
   // console.log("Gop:", status);
 
@@ -4884,7 +4890,7 @@ app.get("/download-file/:status", async (req, res) => {
       if (status.endsWith("_photo")) {
         let query = "";
         const count_photo_download = utils.countDownloadByAction("photo");
-      
+
         try {
           zip.extractAllTo(photoDir, true);
           if (count_photo_download >= 1 && count_photo_download != "") {
@@ -4892,7 +4898,7 @@ app.get("/download-file/:status", async (req, res) => {
           } else if (count_photo_download === 0) {
             query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('', ?, ?, 'Photo', 'D', NOW())`;
           }
-      
+
           console.log(`Photo File extracted successfully to ${photoDir}`);
         } catch (err) {
           if (count_photo_download >= 1 && count_photo_download != "") {
@@ -4904,33 +4910,34 @@ app.get("/download-file/:status", async (req, res) => {
         }
         // Execute the query if it has been set
         if (query) {
-          utils.executeImageDownloadQuery(query,centerCode,serverNo)
-        } 
+          utils.executeImageDownloadQuery(query, centreCode, serverNo);
+          // return res.json({"message":"Photo downloaded Successfully"})
+        }
       }
-      
+
       if (status.endsWith("_sign")) {
         let query = "";
         const count_sign_download = utils.countDownloadByAction("sign");
         try {
-        zip.extractAllTo(signDir, true);
-        if (count_sign_download >= 1 && count_sign_download != "") {
-          query = `UPDATE qp_download set download_status ='D',download_time=now() where centre_code=? and serverno= ? and download_sec='Sign' and download_status != 'D' `;
-        } else if (count_sign_download == 0) {
-          query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('',?,?,'Sign','D',NOW())`;
-        }
-        console.log(`Sign File extracted successfully to ${signDir}`);
-        }catch(err){
-          if(count_sign_download >= 1 && count_sign_download != '') {
-					  query =`UPDATE qp_download set download_status='E2',download_time=now() where centre_code= ? and serverno= ? and download_sec='Sign' and download_status != 'E2' `;
-					} else if(count_sign_download == 0) {
-					  query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('',?,?,'Sign','E2',NOW())`;
-					}
-         
+          zip.extractAllTo(signDir, true);
+          if (count_sign_download >= 1 && count_sign_download != "") {
+            query = `UPDATE qp_download set download_status ='D',download_time=now() where centre_code=? and serverno= ? and download_sec='Sign' and download_status != 'D' `;
+          } else if (count_sign_download == 0) {
+            query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('',?,?,'Sign','D',NOW())`;
+          }
+          console.log(`Sign File extracted successfully to ${signDir}`);
+        } catch (err) {
+          if (count_sign_download >= 1 && count_sign_download != "") {
+            query = `UPDATE qp_download set download_status='E2',download_time=now() where centre_code= ? and serverno= ? and download_sec='Sign' and download_status != 'E2' `;
+          } else if (count_sign_download == 0) {
+            query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('',?,?,'Sign','E2',NOW())`;
+          }
           console.log(err);
         }
         if (query) {
-          utils.executeImageDownloadQuery(query,centerCode,serverNo)
-        } 
+          utils.executeImageDownloadQuery(query, centreCode, serverNo);
+          // return res.json({"message":"Sign downloaded Successfully"})
+        }
       }
     }
     // Optionally delete the zip file after extraction
@@ -4938,31 +4945,200 @@ app.get("/download-file/:status", async (req, res) => {
 
     res.send("File downloaded, extracted, and content modified successfully");
   } catch (error) {
-    if(status.endsWith("_photo")){
+    if (status.endsWith("_photo")) {
       let query = "";
       const count_photo_download = utils.countDownloadByAction("photo");
-      if(count_photo_download >= 1 && count_photo_download != '') {
-        query =`UPDATE qp_download set download_status='NF', download_time=now() where centre_code = ? and serverno = ? and  download_sec='Photo' and download_status != 'NF' `;
-      } else if(count_photo_download == 0) {
-        query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('', ?, ?, 'Photo', 'NF', NOW())`;      }
+      if (count_photo_download >= 1 && count_photo_download != "") {
+        query = `UPDATE qp_download set download_status='NF', download_time=now() where centre_code = ? and serverno = ? and  download_sec='Photo' and download_status != 'NF' `;
+      } else if (count_photo_download == 0) {
+        query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('', ?, ?, 'Photo', 'NF', NOW())`;
+      }
       if (query) {
-          utils.executeImageDownloadQuery(query,centerCode,serverNo)
-        } 
+        utils.executeImageDownloadQuery(query, centreCode, serverNo);
+      }
     }
-    if(status.endsWith("_sign")){
+    if (status.endsWith("_sign")) {
       const count_sign_download = utils.countDownloadByAction("sign");
-      let query ="";
-      if(count_sign_download >= 1 && count_sign_download != '') {
-        query =`UPDATE qp_download set download_status='NF', download_time=now() where centre_code = ? and serverno = ? and  download_sec='Sign' and download_status != 'NF' `;
-      } else if(count_sign_download == 0) {
-        query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('', ?, ?, 'Sign', 'NF', NOW())`;      }
-        if (query) {
-          utils.executeImageDownloadQuery(query,centerCode,serverNo)
-        } 
+      let query = "";
+      if (count_sign_download >= 1 && count_sign_download != "") {
+        query = `UPDATE qp_download set download_status='NF', download_time=now() where centre_code = ? and serverno = ? and  download_sec='Sign' and download_status != 'NF' `;
+      } else if (count_sign_download == 0) {
+        query = `INSERT INTO qp_download (id, centre_code, serverno, download_sec, download_status, download_time) VALUES ('', ?, ?, 'Sign', 'NF', NOW())`;
+      }
+      if (query) {
+        utils.executeImageDownloadQuery(query, centreCode, serverNo);
+      }
     }
 
     console.error("Error during download or extraction:", error);
     res.status(500).send("Error during the process");
+  }
+});
+
+app.get("/check-status/", async (req, res) => {
+  const result = await axios.get("http://localhost:5000/serial-number/");
+  const serialNumber = result.data.serialNumber;
+
+  const getCenterAndServer = await queryAsync(
+    "select count(1) as count, serverno as serverNo, centre_code as centerCode from qp_download order by id DESC"
+  );
+  const { count, serverNo, centerCode } = getCenterAndServer[0];
+  const downloadArray = ["Base QP", "Centre QP", "Photo", "Sign"];
+  const getDownloadCount = await queryAsync(
+    "SELECT COUNT(DISTINCT download_sec) as count FROM qp_download WHERE download_sec IN (?) AND download_status = 'D'",
+    [downloadArray]
+  );
+  console.log(getDownloadCount[0].count);
+
+  if (count > 0 && downloadArray.length == getDownloadCount[0].count) {
+    let activatedBatchArray = [];
+    const checkActivation = await queryAsync(
+      "SELECT id, download_sec FROM qp_download WHERE download_sec LIKE 'Activated-%' GROUP BY download_sec"
+    );
+    for (const check of checkActivation) {
+      console.log(check.download_sec);
+      const result = check.download_sec.replace("Activated-", "").trim();
+      activatedBatchArray.push(result);
+    }
+    console.log(activatedBatchArray); // Output: ['Batch123']
+    const data = {
+      serialNumber: serialNumber,
+      database: process.env.DB_NAME,
+      centerCode: centerCode,
+      serverNo: serverNo,
+      data_downloaded: "Y",
+      activated_batch: JSON.stringify(activatedBatchArray),
+      b: "",
+      pos: "",
+      sc: "DJC",
+    };
+    try {
+      const response = await axios.post(
+        "http://demo70.sifyitest.com/livedata/auto_assign_server_no",
+        {
+          data: data,
+        }
+      );
+      if (response.statusText === "OK") {
+        return res.send("Check status done");
+      }
+    } catch (err) {
+      console.error(err);
+      return res.send("Check status failed");
+    }
+  }
+});
+
+app.get("/db-patch/", async (req, res) => {
+  const { centre_code, serverno } = utils.centreAndServerNo();
+  const dbVersion = await queryAsync(
+    "SELECT db_version FROM taserver_version order by id asc"
+  );
+  // console.log(dbVersion[0].db_version);
+  const result = await axios.get("http://localhost:5000/serial-number/");
+  const serialNumber = result.data.serialNumber;
+  const data = {
+    serialNumber: serialNumber,
+    database: process.env.DB_NAME,
+    centerCode: centre_code,
+    serverNo: serverno,
+    db_version: dbVersion[0].db_version,
+    sc: "QPU",
+  };
+  try {
+    // Make a GET request to the server
+    const response = await axios.get(
+      "https://demo70.sifyitest.com/livedata/patch_upd.php"
+    );
+    const result = response.data; // Parse JSON response
+    if (result[0] != data.db_version) {
+      console.log("this file need to be downloaded" + result[1]);
+    
+    const tempDir = path.join("C:", "pro", "itest", "activate", "temp");
+    const extractDir = path.join("C:", "pro", "itest", "activate");
+    const fileName = result[1].split("/")[1];
+    console.log(fileName);
+    // Define the full path for saving the downloaded file
+    const zipFilePath = path.join(tempDir, fileName); // Using result[1] as the filename
+
+    // Create the temp directory if it doesn't exist
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    try {
+      // Step 1: Download the file
+      const url = `https://demo70.sifyitest.com/livedata/${result[1]}`;
+      const response = await axios.get(url, { responseType: "stream" });
+    
+      // Step 2: Pipe the response to a write stream
+      const writer = fs.createWriteStream(zipFilePath);
+      response.data.pipe(writer);
+    
+      // Step 3: Wait for the file to be written to disk
+      await new Promise((resolve, reject) => {
+        writer.on("finish", resolve); // Resolve once finished writing
+        writer.on("error", reject); // Reject if an error occurs
+      });
+    
+      console.log("File downloaded successfully to", zipFilePath);
+    
+      // Step 4: Unzip the file
+      const zip = new AdmZip(zipFilePath);
+      zip.extractAllTo(extractDir, true);
+      console.log(`File extracted successfully to ${extractDir}`);
+    
+      const patchFilePath = path.join(extractDir, `${(fileName.split("."))[0]}.sql`);
+      const mysqlPath = "C:/mysql5/bin/mysql.exe";
+    
+      // Escape special characters in the password if needed
+      const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
+    
+      // Construct the command
+      const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}" ${process.env.DB_NAME} < "${patchFilePath}"`;
+      
+       exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+          console.error(`stderr: ${stderr}`);
+          // Only send the response if it's not already been sent
+          if (!res.headersSent) {
+            return res.status(500).send("Error importing dump file");
+          }
+        }
+        console.log(stdout);
+        if(stdout == ''){
+          fs.unlinkSync(patchFilePath);
+        }
+        // If no error, send success response (only if it's not already sent)
+        if (!res.headersSent) {
+          res.send("Patch file imported successfully");
+        }
+      });
+    
+      // Delete the zip file after everything is done
+      fs.unlinkSync(zipFilePath);
+      // patchFilePath
+    
+    } catch (err) {
+      console.error("Error:", err);
+      if (!res.headersSent) {
+        res.status(500).send("An error occurred during the process");
+      }
+    }
+    // finally{
+    //   const patchFilePath = path.join(extractDir, `${(fileName.split("."))[0]}.sql`);
+    //   fs.unlinkSync(patchFilePath)
+    // }
+    console.log("Response from server:", result[0]); // Logs the JSON array ["7.0", "dbdump/hello.zip"]
+    res.send(result);
+  }else{
+    res.send(false)
+  }
+     // Sends the server response back to the client
+  } catch (error) {
+    console.error("Request failed", error);
+    res.status(500).send("Error sending request to server");
   }
 });
 
