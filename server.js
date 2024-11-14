@@ -23,7 +23,9 @@ const { arValue, timeValue, biometricValue } = require("./Constants");
 
 const app = express();
 const port = 5000;
-const mysqlPath = '"C:/mysql5/bin/mysql.exe"';
+// const mysqlPath = '"C:/mysql5/bin/mysql.exe"';
+const mysqlPath = "C:/xampp/mysql/bin/mysql.exe";
+
 
 // List of tables to export
 const tablesToExport = [
@@ -344,14 +346,23 @@ app.get("/download-zip/:status/:batch", async (req, res) => {
   console.log("Gop:", batch);
 
   // let file = status === 'Base' ? process.env.CLIENT : status;
-  const file =
-    status === "Base"
-      ? process.env.CLIENT
-      : status === "Act"
-        ? batch == "11:00:00"
-          ? "bac7a-110000"
-          : "78192-150000"
-        : status;
+  // const file =
+  //   status === "Base"
+  //     ? process.env.CLIENT
+  //     : status === "Act"
+  //       ? batch == "11:00:00"
+  //         ? "bac7a-110000"
+  //         : "78192-150000"
+  //       : status;
+
+        const file =
+        status === "Base"
+          ? process.env.CLIENT
+          : status === "Act"
+            ? batch == "10:00:00"
+              ? "90e6e-100000"
+              : "3b62f-150000"
+            : status;
   const url = `https://demo70.sifyitest.com/livedata/${file}.zip`;
 
   console.log("URL:", url);
@@ -479,14 +490,16 @@ app.get("/start-pm2", (req, res) => {
 app.post("/upload", upload.single("file"), (req, res) => {
   const dumpFilePath = path.join(__dirname, "uploads", req.file.filename);
 
-  const mysqlPath = "C:/mysql5/bin/mysql.exe";
+  // const mysqlPath = "C:/mysql5/bin/mysql.exe";
+  // const mysqlPath = "C:/mysql5/bin/mysql.exe";
+
 
   // Escape special characters in the password if needed
   const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
 
   // Construct the command
-  const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}" ${process.env.DB_NAME} < "${dumpFilePath}"`;
-
+  const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}"  ${process.env.DB_NAME} < "${dumpFilePath}"`;
+console.log( command);
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -503,13 +516,21 @@ app.post("/activate/:status/:batch", (req, res) => {
   const status = req.params.status;
   const batch = req.params.batch;
   // console.log('staus',status);
-  const file =
+  // const file =
+  //   status === "Base"
+  //     ? process.env.CLIENT
+  //     : status === "Act"
+  //       ? batch == "11:00:00"
+  //         ? "bac7a-110000"
+  //         : "78192-150000"
+  //       : status;
+        const file =
     status === "Base"
       ? process.env.CLIENT
       : status === "Act"
-        ? batch == "11:00:00"
-          ? "bac7a-110000"
-          : "78192-150000"
+        ? batch == "10:00:00"
+          ? "90e6e-100000"
+          : "3b62f-150000"
         : status;
   console.log("File:", file);
   // Define the dumpFilePath based on the status
@@ -529,7 +550,7 @@ app.post("/activate/:status/:batch", (req, res) => {
     dumpFilePath = path.join("C:", "pro", "itest", "activate", `${file}.sql`);
   }
 
-  const mysqlPath = "C:/mysql5/bin/mysql.exe";
+  // const mysqlPath = "C:/mysql5/bin/mysql.exe";
 
   // Log paths for debugging
   console.log("MySQL Path:", mysqlPath);
@@ -547,7 +568,7 @@ app.post("/activate/:status/:batch", (req, res) => {
   const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
 
   // Construct the MySQL command
-  const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}" ${process.env.DB_NAME} < "${dumpFilePath}"`;
+  const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}"  ${process.env.DB_NAME} < "${dumpFilePath}"`;
   console.log("Executing command:", command);
 
   // Execute the command
@@ -648,7 +669,7 @@ app.get("/clear", (req, res) => {
           res.send("All queries executed and committed successfully");
 
           const dumpFilePath = "C:/pro/itest/activate/db.dmp";
-          const mysqlPath = "C:/mysql5/bin/mysql.exe";
+          // const mysqlPath = "C:/mysql5/bin/mysql.exe";
 
           // Escape special characters in the password if needed
           const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
@@ -4843,13 +4864,21 @@ app.get("/download-file/:status", async (req, res) => {
   // console.log("Gop:", status);
 
   // let file = status === 'Base' ? process.env.CLIENT : status;
-  const file =
+  // const file =
+  //   status === "Base"
+  //     ? process.env.CLIENT
+  //     : status === "Act"
+  //       ? batch == "11:00:00"
+  //         ? "bac7a-110000"
+  //         : "78192-150000"
+  //       : status;
+        const file =
     status === "Base"
       ? process.env.CLIENT
       : status === "Act"
-        ? batch == "11:00:00"
-          ? "bac7a-110000"
-          : "78192-150000"
+        ? batch == "10:00:00"
+          ? "90e6e-100000"
+          : "3b62f-150000"
         : status;
   const url = `https://demo70.sifyitest.com/livedata/${file}.zip`;
 
@@ -5089,7 +5118,7 @@ app.get("/db-patch/", async (req, res) => {
       console.log(`File extracted successfully to ${extractDir}`);
     
       const patchFilePath = path.join(extractDir, `${(fileName.split("."))[0]}.sql`);
-      const mysqlPath = "C:/mysql5/bin/mysql.exe";
+      // const mysqlPath = "C:/mysql5/bin/mysql.exe";
     
       // Escape special characters in the password if needed
       const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');

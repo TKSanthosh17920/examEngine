@@ -29,7 +29,9 @@ const ReusablePasswordDialog = ({ open, onClose, onSubmit, validAccess, title, p
             }else if(passwordtype=='backup' & password == 'zip'){
                 validAccess(1);
             }else if(passwordtype=='activation'){
-                if((batch=='11:00:00' && password=='b1') || (batch=='15:00:00' && password=='b2') ){
+                // if((batch=='11:00:00' && password=='b1') || (batch=='15:00:00' && password=='b2') ){
+                    if((batch=='10:00:00' && password=='b1') || (batch=='15:00:00' && password=='b2') ){
+
                     validAccess(1);
                 } else {
                     validAccess(0);

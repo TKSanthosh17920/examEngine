@@ -350,7 +350,7 @@ CREATE TABLE `iib_candidate_iway` (
   `subject_code` char(20) NOT NULL DEFAULT '',
   `zone_code` time NOT NULL DEFAULT '00:00:00',
   `state_code` char(5) DEFAULT NULL,
-  `exam_date` date DEFAULT '1970-01-01',
+  `exam_date` date DEFAULT '0000-00-00',
   `exam_time` time DEFAULT '00:00:00',
   `qp_assigned` enum('Y','N') DEFAULT 'N',
   `qp_generated` enum('Y','N') DEFAULT 'N',
@@ -1530,7 +1530,7 @@ DROP TABLE IF EXISTS `iib_ta_iway`;
 CREATE TABLE `iib_ta_iway` (
   `ta_login` varchar(20) NOT NULL DEFAULT '',
   `centre_code` varchar(20) NOT NULL DEFAULT '',
-  `exam_date` date NOT NULL DEFAULT '1970-01-01',
+  `exam_date` date NOT NULL DEFAULT '0000-00-00',
   `exam_time` time NOT NULL DEFAULT '00:00:00'
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1696,10 +1696,10 @@ CREATE TABLE `member_rough_sheet` (
   `membership_no` varchar(250) NOT NULL DEFAULT '',
   `question_paper_no` int(11) NOT NULL,
   `subject_code` varchar(25) DEFAULT NULL,
-  `exam_date` date NOT NULL DEFAULT '1970-01-01',
+  `exam_date` date NOT NULL DEFAULT '0000-00-00',
   `message` text,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT '1970-01-01 00:00:00',
+  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`membership_no`,`question_paper_no`,`exam_date`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
@@ -1877,8 +1877,8 @@ CREATE TABLE `biometric_report_api` (
   `exam_date` date NOT NULL,
   `labname` text NOT NULL,
   `batch_time` varchar(10) NOT NULL DEFAULT '',
-  `date_created` datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
-  `date_updated` timestamp NOT NULL DEFAULT '1970-01-01 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
+  `date_created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `date_updated` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `check_bio` (`membership_no`)
 ) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
@@ -1890,9 +1890,9 @@ CREATE TABLE `candidate_seat_management` (
   `exam_seatno` varchar(10) NOT NULL DEFAULT '',
   `candidate_ipaddress` varchar(20) NOT NULL DEFAULT '127.0.0.1',
   `status` tinyint(2) NOT NULL DEFAULT '0',
-  `date_created` datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
-  `date_updated` timestamp NOT NULL DEFAULT '1970-01-01 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
-  `exam_date` datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
+  `date_created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `date_updated` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
+  `exam_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`biometric_id`),
   KEY `check_bio` (`status`),
   KEY `getipAddress` (`exam_seatno`,`status`)
@@ -1903,7 +1903,7 @@ CREATE TABLE `biometric_changelog` (
   `bioreport_id` int(10) NOT NULL DEFAULT '0',
   `from_ip` varchar(20) NOT NULL DEFAULT '127.0.0.1',
   `to_ip` varchar(20) NOT NULL DEFAULT '127.0.0.1',
-  `date_updated` timestamp NOT NULL DEFAULT '1970-01-01 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
+  `date_updated` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
   `remote_serialno` varchar(20) NOT NULL DEFAULT '',
   `remote_ip` varchar(20) NOT NULL DEFAULT '127.0.0.1',
   PRIMARY KEY (`biolog_id`)
@@ -1911,12 +1911,12 @@ CREATE TABLE `biometric_changelog` (
 
  CREATE TABLE `exam_skip_biometricvalidation` (
   `skip_id` int(10) NOT NULL AUTO_INCREMENT,
-  `exam_date` date NOT NULL DEFAULT '1970-01-01',
+  `exam_date` date NOT NULL DEFAULT '0000-00-00',
   `exam_slot_time` time NOT NULL DEFAULT '00:00:00',
   `skip_mode` tinyint(4) NOT NULL DEFAULT '0',
   `membership_no` char(20) NOT NULL DEFAULT '',
-  `dateaddedon` datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
-  `date_updated` datetime DEFAULT '1970-01-01 00:00:00',
+  `dateaddedon` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `date_updated` datetime DEFAULT '0000-00-00 00:00:00',
   `skip_status` tinyint(4) NOT NULL DEFAULT '0',
   `admin_serialno` varchar(20) NOT NULL DEFAULT '',
   `admin_ipv4` varchar(20) NOT NULL DEFAULT '',
@@ -1928,7 +1928,7 @@ CREATE TABLE `biometric_changelog` (
 CREATE TABLE `biometric_servers` (
   `id` int(10) NOT NULL AUTO_INCREMENT,
   `server_ips` text CHARACTER SET utf8 NOT NULL,
-  `date_created` datetime NOT NULL DEFAULT '1970-01-01 00:00:00',
+  `date_created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
