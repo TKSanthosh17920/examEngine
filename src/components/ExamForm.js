@@ -365,10 +365,57 @@ const ExamForm = () => {
       };
 
     //   console.log('option ans',answers);
-      const renderOptions = (options, questionId, answer_order) => {
-        // Reorder the options based on answerOrder
-        const reorderedOptions = reorderOptions(options, answer_order);
+    //   const renderOptions = (options, questionId, answer_order) => {
+    //     // Reorder the options based on answerOrder
+    //     const reorderedOptions = reorderOptions(options, answer_order);
         
+      
+    //     // Define the labels for options (assuming you have 4 options)
+    //     const optionLabels = ['a)', 'b)', 'c)', 'd)'].slice(0, reorderedOptions.length);
+      
+    //     return (
+    //       <table className="options-table">
+    //         <tbody>
+    //           {reorderedOptions.map((option, index) => {
+    //             // Calculate the actual value based on the position in the answerOrder
+    //             const value = parseAnswerOrder(answer_order)[index];
+    //             return (
+    //               <tr key={option.id} className="option-row">
+    //                 <td className="option-input-cell">
+    //                   <input
+    //                     type="radio"
+    //                     id={`option_${value}`} // Set ID based on the value from answerOrder
+    //                     name={`question_${questionId}`}
+    //                     value={value} // Radio button value based on the answerOrder
+    //                     checked={answers[questionId] === value}
+    //                     onChange={() => handleOptionChange(questionId, value)}
+    //                     aria-label={`Option ${optionLabels[index]} for question ${questionId}`}
+    //                   />
+    //                 </td>
+    //                 <td className="option-label-cell">
+    //                   <label style={{margin: "-15px 10px", position: "absolute"}}  htmlFor={`option_${value}`} className="option-label">
+    //                     {optionLabels[index]}
+    //                   </label>
+    //                 </td>
+    //                 <td className="option-text-cell">
+    //                   <label
+    //                     htmlFor={`option_${value}`}
+    //                     className="option-text"
+    //                     style={{ cursor: "pointer", marginTop: "25px", fontSize: `${fontSize}px` }}
+    //                   >
+    //                     <RenderHtmlContent className="optiontext" htmlString={option.text} />
+    //                   </label>
+    //                 </td>
+    //               </tr>
+    //             );
+    //           })}
+    //         </tbody>
+    //       </table>
+    //     );
+    //   };
+    const renderOptions = (options, questionId, answer_order) => {
+        // Reorder the options based on answerOrder
+        const reorderedOptions = reorderOptions(options, answer_order) || []; // Fallback to empty array if undefined
       
         // Define the labels for options (assuming you have 4 options)
         const optionLabels = ['a)', 'b)', 'c)', 'd)'].slice(0, reorderedOptions.length);
@@ -377,6 +424,12 @@ const ExamForm = () => {
           <table className="options-table">
             <tbody>
               {reorderedOptions.map((option, index) => {
+                // Check if option and option.text exist before rendering
+                if (!option || !option.text) {
+                  console.warn(`Option or text is missing at index ${index}`, option);
+                  return null; // Skip rendering if option is undefined or missing text
+                }
+      
                 // Calculate the actual value based on the position in the answerOrder
                 const value = parseAnswerOrder(answer_order)[index];
                 return (
@@ -393,7 +446,7 @@ const ExamForm = () => {
                       />
                     </td>
                     <td className="option-label-cell">
-                      <label style={{margin: "-15px 10px", position: "absolute"}}  htmlFor={`option_${value}`} className="option-label">
+                      <label style={{margin: "-15px 10px", position: "absolute"}} htmlFor={`option_${value}`} className="option-label">
                         {optionLabels[index]}
                       </label>
                     </td>
@@ -413,6 +466,7 @@ const ExamForm = () => {
           </table>
         );
       };
+      
       
     
  
