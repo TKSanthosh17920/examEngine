@@ -6,6 +6,10 @@ import './Activate.css';
 import { checkTableFunction } from './utils'; // Import the utility function
 import { Switch, Card, CardContent, Typography, Box } from '@mui/material';
 import ReportTable from './ReportTable';
+// Newly added
+import ExamClosureSummary from './ExamClosureSummary'; 
+// import ExamClosureSummary, { handleSubmit } from './ExamClosureSummary';
+// Newly added
 
 function Activate({ username, examData, serialNumber, onButtonQpStatus }) {
   const [loading, setLoading] = useState(true);
@@ -29,6 +33,26 @@ function Activate({ username, examData, serialNumber, onButtonQpStatus }) {
   const [showCardTwo, setShowCardTwo] = useState(false);
   const [showCardThree, setShowCardThree] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  // Newly added
+  const [showExamClosureSummary, setShowExamClosureSummary] = useState(false);
+
+  const handleReportClick = () => {
+    handleClosePopup();
+    if (examData.length > 0) {
+      const zone_code_val = examData[examData.length - 1].zone_code;
+      handleClosure('day', zone_code_val);
+    } else {
+      alert("No exam data available!");
+    }
+  };
+  
+  const handleClosePopup = () => {
+    setShowExamClosureSummary(null);
+
+  };
+
+ 
+   // Newly added
 
   const handleReportSelect = (report) => {
     setSelectedReport(report); // Update state in parent component
@@ -252,6 +276,7 @@ const handleValidAccess = (vaaccess) => {
         serverno: 'a',
         download_sec: status_msg
     };
+    // alert(data.centre_code);
     try {
       const response = await fetch('http://localhost:5000/insert-base', {
         method: 'POST',
@@ -306,6 +331,7 @@ const handleValidAccess = (vaaccess) => {
      
     setButtonStyle('button-activating active-btn');
     // setClearButtonStyles('active-btn-disabled');
+    
     try {
         setactLoading([false, false, false]);
       const response = await fetch(`http://localhost:5000/activate/${status}/${batch}`, {
@@ -437,8 +463,10 @@ const handleValidAccess = (vaaccess) => {
       if ([1, 2].includes(qpStatus)) {
 
         handleActivation(qpStatus, batch);
+
         
       } else if ([5, 6, 7].includes(qpStatus)) {
+
         // handleActivation(qpStatus, batch);
         setPasswordType('activation')
         handleOpenDialog(batch);
@@ -496,9 +524,10 @@ const handleValidAccess = (vaaccess) => {
         const hostIp = '172.17.109.2';
         // Set loading to true if using a loading state
         setLoading(true);
+          
         // Make GET request to batch closure API
         const response = await axios.get(`http://localhost:5000/handleDayClosure/${batch}/${hostIp}/${serialNumber}/${username}`);
-        console.log('respppp',response.statusText);
+    console.log('respppp',response.statusText);
         if(response.statusText=='OK'){
            
               // Display alert on successful batch closure
@@ -530,7 +559,7 @@ const handleValidAccess = (vaaccess) => {
         
       // Make GET request to batch closure API
       const response = await axios.get(`http://localhost:5000/handleBatchClosure/${batch}/${hostIp}/${serialNumber}/${username}`);
-      console.log('respppp',response.statusText);
+  console.log('respppp',response.statusText);
       if(response.statusText=='OK'){
          
             // Display alert on successful batch closure
@@ -592,15 +621,30 @@ const handleValidAccess = (vaaccess) => {
                           </button>
                             {examDataTotal==index+1 ? (
                             <>
-                                <button
+                                {/* <button
                                 onClick={() => handleClosure('day', data.zone_code)}
+                                // Newly added
+                                onClick={() => setShowExamClosureSummary(true)}
+                                // Newly added
                                 disabled={closureButtonDisabled[index]} 
 
                                 style={{ width: "100%" }}
                                 className={batchStyles[index]}
                                 >
                                     Day Closure
-                                </button>
+                                </button> */}
+                                <button
+            onClick={
+              qpStatus=='7'
+                    ? () => handleClosure('day', data.zone_code) // First condition
+                    : () => setShowExamClosureSummary(true) // Second condition
+            }
+            disabled={closureButtonDisabled[index]} // Ensure the button is clickable
+            style={{ width: "100%" }}
+            className={batchStyles[index]}
+        >
+            Day Closure
+        </button>
                             </>
                             ):(
                             <>
@@ -617,8 +661,10 @@ const handleValidAccess = (vaaccess) => {
                             )}
                         </div>
                       ))}
+                     
                     </div>
                   )}
+                  
                 </div>
                 
             </>
@@ -697,6 +743,18 @@ const handleValidAccess = (vaaccess) => {
         ):(<></>)}
             
         </div>
+       {showExamClosureSummary && <div className="popup" style={{top:"30px",left:"250px"}}>
+          <div className="popup-content" style={{overflow:"auto"}}>
+            <span className="close-btn" onClick={handleClosePopup}>&times;</span>
+            <h4>Exam Closure Summary</h4>
+            {/* {examData.map((data, index) => ( */}
+            {/* <ExamClosureSummary onSubmitComplete={handleClosure('day', '1')} /> */}
+            {/* ))} */}
+            <ExamClosureSummary onSubmitSuccess={handleReportClick} />
+            
+          </div>
+        </div>
+} 
       </center>
 
       <ReusablePasswordDialog
