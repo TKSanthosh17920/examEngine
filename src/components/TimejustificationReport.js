@@ -146,6 +146,7 @@ const TimejustificationReport = () => {
       alert("Please select response idle time");
       return;
     }
+
     // Set submitted value (if needed for backend)
     setSubmitted(true);
 
@@ -284,7 +285,7 @@ const TimejustificationReport = () => {
           </tr>
           <tr className="greybluetext10">
             <td colSpan={2} align="center">
-              <table class="table table-bordered table-striped fs-6 "
+              <table class="table table-bordered table-striped fs-6 mt-4"
                 style={{ marginBottom: "20px" }}
                 className="table-bordered"
                 width="100%"
@@ -378,7 +379,7 @@ const TimejustificationReport = () => {
               <tr>
                 <td valign="top" width="50%">
                   <table
-                  class="table table-bordered table-striped fs-6"
+                  class="table table-bordered table-striped fs-6 mt-4"
                     // style={{ marginBottom: "20px" }}
                     className="table-bordered"
                     width="100%"
@@ -515,7 +516,7 @@ const TimejustificationReport = () => {
                 </td>
                 <td valign="top">
                   <table
-                  class="table table-bordered table-striped fs-6"
+                  class="table table-bordered table-striped fs-6 mt-4"
                     width="80%"
                     border="1"
                     cellSpacing="0"

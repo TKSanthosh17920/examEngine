@@ -110,7 +110,9 @@ const SampleQp = () => {
       setCurrentQuestionIndex(index);
     };
 
-
+    const watermarks = Array.from({ length: 390 }, (_, i) => (
+      <div key={i} className="watermark-text">Sample Question</div>
+    ));
     
 
   const handleStartExam = async (e) => {
@@ -292,6 +294,9 @@ const SampleQp = () => {
                   <span className='qlabel'>Q.{incrementingId})</span>
                 </div>
                 <div className="main">
+                <div className="watermark">
+                {watermarks}
+      </div>
                   <span className='qtext' style={{ fontSize: `${fontSize}px` }}>
                     <RenderHtmlContent page='sampleQP' htmlString={currentQuestion.text} />
                   </span>
@@ -484,7 +489,7 @@ const SampleQp = () => {
                             
                             <label className='info-title'>Candidate Exam Sample Result</label>
                             <div className='row'>
-                                <div className='col-md-8'>
+                                <div className='col-md-10'>
                                     <table className='infodetails'>
                                         <tbody>
                                             <tr>

@@ -154,7 +154,7 @@ const TrackingfeedReport = () => {
 
       <br />
 
-      {/* <table class="table table-bordered table-striped fs-10 mt-4" width="100%" border="1" cellSpacing="1" cellPadding="1">
+      <table class="table table-bordered table-striped fs-10 mt-4" width="100%" border="1" cellSpacing="1" cellPadding="1">
       <thead>
         <tr>
           <td width="30%" colSpan="4"><center><b>File List</b></center></td>
@@ -180,7 +180,7 @@ const TrackingfeedReport = () => {
           </tr>
         )}
       </tbody>
-    </table> */}
+    </table>
     </div>
   );
 };
