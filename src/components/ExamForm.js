@@ -415,10 +415,12 @@ const ExamForm = () => {
     //   };
     const renderOptions = (options, questionId, answer_order) => {
         // Reorder the options based on answerOrder
+        
         const reorderedOptions = reorderOptions(options, answer_order) || []; // Fallback to empty array if undefined
       
         // Define the labels for options (assuming you have 4 options)
-        const optionLabels = ['a)', 'b)', 'c)', 'd)'].slice(0, reorderedOptions.length);
+        
+        const optionLabels = ['a)', 'b)', 'c)', 'd)','e)'].slice(0, reorderedOptions.length);
       
         return (
           <table className="options-table">
@@ -429,7 +431,7 @@ const ExamForm = () => {
                   console.warn(`Option or text is missing at index ${index}`, option);
                   return null; // Skip rendering if option is undefined or missing text
                 }
-      
+                if(option.text !== 'NULL'){
                 // Calculate the actual value based on the position in the answerOrder
                 const value = parseAnswerOrder(answer_order)[index];
                 return (
@@ -460,7 +462,7 @@ const ExamForm = () => {
                       </label>
                     </td>
                   </tr>
-                );
+                );}
               })}
             </tbody>
           </table>
@@ -473,7 +475,7 @@ const ExamForm = () => {
     const renderCurrentQuestion = () => {
         // console.log('tagg',tagquestions);
       const currentQuestion = questions[currentQuestionIndex];
- 
+    //   alert(JSON.stringify(currentQuestion))
       if (questions.length === 0 || questions.length === undefined) {
         return <PopUp text={"QPPage"}/>;
       }

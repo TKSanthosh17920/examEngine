@@ -1032,6 +1032,7 @@ app.get("/questions/:questionPaperNo/:encryptKey", (req, res) => {
         AES_DECRYPT(b.option_2, ?) as option_2, 
         AES_DECRYPT(b.option_3, ?) as option_3, 
         AES_DECRYPT(b.option_4, ?) as option_4, 
+        AES_DECRYPT(b.option_5, ?) as option_5, 
         b.correct_answer, b.marks, b.negative_marks, c.*
       FROM iib_question_paper_details AS a
       JOIN iib_sq_details AS b ON a.subject_code = b.subject_code 
@@ -1041,6 +1042,7 @@ app.get("/questions/:questionPaperNo/:encryptKey", (req, res) => {
   db.query(
     sql,
     [
+      encryptKey,
       encryptKey,
       encryptKey,
       encryptKey,
@@ -1065,6 +1067,8 @@ app.get("/questions/:questionPaperNo/:encryptKey", (req, res) => {
             { id: "b", text: decode(question.option_2) },
             { id: "c", text: decode(question.option_3) },
             { id: "d", text: decode(question.option_4) },
+            { id: "e", text: decode(question.option_5) },
+
           ],
           correct_ans: Number(question.correct_answer),
           // correct_ans: 2,
