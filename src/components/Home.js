@@ -25,6 +25,56 @@ const Main = () => {
   const [testStatus, setTestStatus] = useState(null);
   const [hostIp, setHostIp] = useState('');
   const navigate = useNavigate();
+  const [mediumSettings, setMediumSettings] = useState({});
+  const [subjectLanguages, setSubjectLanguages] = useState([]);
+  // const [mediumCode, setMediumCode] = useState("");
+  const [mediumCode, setMediumCode] = React.useState(
+    sessionStorage.getItem('candidate-medium') || 'EN'
+  );
+  const [arrLang, setArrLang] = useState({});
+  const [session, setSession] = useState({});
+
+  const medium = sessionStorage.getItem('candidate-medium') || 'EN';
+
+
+  const renderMediumCode = () => {
+    if (session.ta_override != "Y") {
+      if (mediumSettings.display_medium == "Y") {
+        return mediumSettings.display_medium_dropdown == "Y" ? (
+            <select
+            id="langlist"
+            className="listbox"
+            name="lstmedium"
+            value={medium}
+            onChange={(e) => {
+              const selectedMedium = e.target.value;
+              setMediumCode(selectedMedium); // Update the state
+              sessionStorage.setItem('candidate-medium', selectedMedium); // Store in sessionStorage
+            }}
+          >
+            {subjectLanguages.map((langCode) => (
+              <option key={langCode} value={langCode}>
+                {arrLang[langCode]}
+              </option>
+            ))}
+          </select>
+          
+        ) : (
+          <>
+            {arrLang[subjectLanguages[0]]}
+            <input type="hidden" value={subjectLanguages[0]} name="lstmedium" />
+          </>
+        );
+      } else {
+        return <input type="hidden" value={subjectLanguages[0]} name="lstmedium" />;
+      }
+    } else if (mediumSettings.display_medium == "Y") {
+      return <>{arrLang[session.mc]}</>;
+    }
+  
+    return null; // Fallback return if no conditions are met
+  };
+  
 
   useEffect(() => {
     const getIp = async () => {
@@ -80,6 +130,7 @@ const Main = () => {
       }
     };
 
+    // alert(medium);
 
     const fetchExamSettings = async () => {
         console.log('exam settings 0');
@@ -186,6 +237,28 @@ const getButtonText = () => {
     }
 };
 
+useEffect(() => {
+  // Fetch medium settings from backend
+  // {candidateInfo[0] ? (
+    if (candidateInfo.length > 0 && candidateInfo[0].subject_code) {
+      // alert(candidateInfo[0].subject_code); // Use subject_code
+      const subject_code=candidateInfo[0].subject_code;
+   
+// )}
+  axios.get(`http://localhost:5000/medium-settings/${subject_code}`).then((response) => {
+    // axios.get(`http://localhost:5000/medium-settings`).then((response) => {
+    const { mediumSettings, subjectLanguages, mediumCode, arrLang, session } =
+      response.data;
+  //   sessionStorage.setItem('candidate-medium', mediumCode);
+    setMediumSettings(mediumSettings);
+    setSubjectLanguages(subjectLanguages);
+    setMediumCode(mediumCode);
+    setArrLang(arrLang);
+    setSession(session);
+  });
+}
+}, [candidateInfo]);
+
   return (
     <>
       {user ? (
@@ -207,6 +280,7 @@ const getButtonText = () => {
                                     <tr><td>Membership No</td><td>:</td><th>{candidateInfo[0].user}</th></tr>
                                     <tr><td>Center Code</td><td>:</td><th>1012313A</th></tr>
                                     <tr><td>Center Venue</td><td>:</td><th>{candidateInfo[0].exam_venue}</th></tr>
+                                    <tr><td>Medium Code</td><td>:</td><th>{renderMediumCode()}</th></tr>
                                 </table>
                             </div>
                             <div className='col-md-3'>
