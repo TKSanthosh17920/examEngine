@@ -26,7 +26,6 @@ const port = 5000;
 // const mysqlPath = '"C:/mysql5/bin/mysql.exe"';
 const mysqlPath = "C:/xampp/mysql/bin/mysql.exe";
 
-
 // List of tables to export
 const tablesToExport = [
   "autofeed",
@@ -104,7 +103,6 @@ const users = [
   { username: "admin", password: "password123", serialnumber: "6CD338GLL1" },
   { username: "110086D", password: "admin", serialnumber: "5CD311G1F5" },
   { username: "854306A", password: "admin", serialnumber: "5CD311G1F5" },
-
 ];
 
 // Set a value in Memcached
@@ -355,14 +353,14 @@ app.get("/download-zip/:status/:batch", async (req, res) => {
   //         : "78192-150000"
   //       : status;
 
-        const file =
-        status === "Base"
-          ? process.env.CLIENT
-          : status === "Act"
-            ? batch == "10:00:00"
-              ? "90e6e-100000"
-              : "3b62f-150000"
-            : status;
+  const file =
+    status === "Base"
+      ? process.env.CLIENT
+      : status === "Act"
+        ? batch == "10:00:00"
+          ? "90e6e-100000"
+          : "3b62f-150000"
+        : status;
   const url = `https://demo70.sifyitest.com/livedata/${file}.zip`;
 
   console.log("URL:", url);
@@ -493,13 +491,12 @@ app.post("/upload", upload.single("file"), (req, res) => {
   // const mysqlPath = "C:/mysql5/bin/mysql.exe";
   // const mysqlPath = "C:/mysql5/bin/mysql.exe";
 
-
   // Escape special characters in the password if needed
   const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
 
   // Construct the command
   const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}"  ${process.env.DB_NAME} < "${dumpFilePath}"`;
-console.log( command);
+  console.log(command);
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -524,7 +521,7 @@ app.post("/activate/:status/:batch", (req, res) => {
   //         ? "bac7a-110000"
   //         : "78192-150000"
   //       : status;
-        const file =
+  const file =
     status === "Base"
       ? process.env.CLIENT
       : status === "Act"
@@ -546,6 +543,11 @@ app.post("/activate/:status/:batch", (req, res) => {
       "images",
       `${file}.txt`
     );
+    //Newly added code
+
+    dumpFilePath = dumpFilePath.replace(/\\/g, "/");
+
+    //Newly added code
   } else {
     dumpFilePath = path.join("C:", "pro", "itest", "activate", `${file}.sql`);
   }
@@ -735,6 +737,7 @@ app.post("/response", (req, res) => {
     clienttime,
     totalTime,
   } = req.body;
+
   if (!questionId || !answer || !qpno || !displayorder || !tag || !hostip) {
     return res
       .status(400)
@@ -1018,39 +1021,153 @@ app.get("/question-counts/:subjectCode", (req, res) => {
 });
 
 // Route to get questions
-app.get("/questions/:questionPaperNo/:encryptKey", (req, res) => {
+// app.get("/questions/:questionPaperNo/:encryptKey", (req, res) => {
+//   const questionPaperNo = req.params.questionPaperNo;
+//   const encryptKey = req.params.encryptKey;
+//   if (!questionPaperNo) {
+//     return res.status(400).json({ error: "Invalid questionPaperNo parameter" });
+//   }
+
+//   const sql = `
+//       SELECT a.*, b.question_id as question_id,
+//         AES_DECRYPT(b.question_text, ?) as question_text, 
+//         AES_DECRYPT(b.option_1, ?) as option_1, 
+//         AES_DECRYPT(b.option_2, ?) as option_2, 
+//         AES_DECRYPT(b.option_3, ?) as option_3, 
+//         AES_DECRYPT(b.option_4, ?) as option_4, 
+//         AES_DECRYPT(b.option_5, ?) as option_5, 
+//         b.correct_answer, b.marks, b.negative_marks, c.*
+//       FROM iib_question_paper_details AS a
+//       JOIN iib_sq_details AS b ON a.subject_code = b.subject_code 
+//       JOIN iib_subject_sections AS c ON b.section_code = c.section_code AND a.question_id = b.question_id
+//       WHERE a.question_paper_no = ? group by b.question_id ORDER BY display_order`;
+
+//   db.query(
+//     sql,
+//     [
+//       encryptKey,
+//       encryptKey,
+//       encryptKey,
+//       encryptKey,
+//       encryptKey,
+//       encryptKey,
+//       questionPaperNo,
+//     ],
+//     (err, result) => {
+//       if (err) {
+//         console.error("MySQL error:", err);
+//         return res.status(500).json({ error: "Internal Server Error" });
+//       } else {
+//         const resultdata = result.map((question, index) => ({
+//           id: question.question_id,
+//           // id: index + 1,
+//           text: decode(question.question_text),
+//           subject_code: question.subject_code,
+//           section_name: question.section_name,
+//           answer_order: question.answer_order,
+//           options: [
+//             { id: "a", text: decode(question.option_1) },
+//             { id: "b", text: decode(question.option_2) },
+//             { id: "c", text: decode(question.option_3) },
+//             { id: "d", text: decode(question.option_4) },
+//             { id: "e", text: decode(question.option_5) },
+//           ],
+//           correct_ans: Number(question.correct_answer),
+//           // correct_ans: 2,
+
+//           mark: question.marks,
+//           negative_mark: question.negative_marks,
+//         }));
+//         //   console.log(resultdata);
+//         res.json(resultdata);
+//       }
+//     }
+//   );
+// });
+
+app.get("/questions/:questionPaperNo/:encryptKey/:lang", (req, res) => {
   const questionPaperNo = req.params.questionPaperNo;
   const encryptKey = req.params.encryptKey;
+  const lang = req.params.lang;
+  // const lang = "TN";
   if (!questionPaperNo) {
     return res.status(400).json({ error: "Invalid questionPaperNo parameter" });
   }
+  // const lang = sessionStorage.getItem('candidate-medium');
 
-  const sql = `
-      SELECT a.*, b.question_id as question_id,
-        AES_DECRYPT(b.question_text, ?) as question_text, 
-        AES_DECRYPT(b.option_1, ?) as option_1, 
-        AES_DECRYPT(b.option_2, ?) as option_2, 
-        AES_DECRYPT(b.option_3, ?) as option_3, 
-        AES_DECRYPT(b.option_4, ?) as option_4, 
-        AES_DECRYPT(b.option_5, ?) as option_5, 
-        b.correct_answer, b.marks, b.negative_marks, c.*
-      FROM iib_question_paper_details AS a
-      JOIN iib_sq_details AS b ON a.subject_code = b.subject_code 
-      JOIN iib_subject_sections AS c ON b.section_code = c.section_code AND a.question_id = b.question_id
-      WHERE a.question_paper_no = ? group by b.question_id ORDER BY display_order`;
+  console.log(lang);
+  console.log(lang);
+// Determine which table and condition to use based on language
+let sql;
+if (lang == "EN") {
+  sql = `
+    SELECT 
+      a.*, 
+      b.question_id AS question_id,
+      AES_DECRYPT(b.question_text, ?) AS question_text, 
+      AES_DECRYPT(b.option_1, ?) AS option_1, 
+      AES_DECRYPT(b.option_2, ?) AS option_2, 
+      AES_DECRYPT(b.option_3, ?) AS option_3, 
+      AES_DECRYPT(b.option_4, ?) AS option_4, 
+      AES_DECRYPT(b.option_5, ?) AS option_5, 
+      b.correct_answer, 
+      b.marks, 
+      b.negative_marks, 
+      c.*
+    FROM iib_question_paper_details AS a
+    JOIN iib_sq_details AS b 
+      ON a.subject_code = b.subject_code 
+    JOIN iib_subject_sections AS c 
+      ON b.section_code = c.section_code AND a.question_id = b.question_id
+    WHERE a.question_paper_no = ? 
+    GROUP BY b.question_id 
+    ORDER BY display_order
+  `;
+} else {
+  sql = `
+    SELECT 
+      a.*, 
+      b.question_id AS question_id,
+      AES_DECRYPT(d.question_text, ?) AS question_text, 
+      AES_DECRYPT(d.option_1, ?) AS option_1, 
+      AES_DECRYPT(d.option_2, ?) AS option_2, 
+      AES_DECRYPT(d.option_3, ?) AS option_3, 
+      AES_DECRYPT(d.option_4, ?) AS option_4, 
+      AES_DECRYPT(d.option_5, ?) AS option_5, 
+      b.correct_answer, 
+      b.marks, 
+      b.negative_marks, 
+      c.*
+    FROM iib_question_paper_details AS a
+    JOIN iib_sq_details AS b 
+      ON a.subject_code = b.subject_code 
+    JOIN iib_subject_sections AS c 
+      ON b.section_code = c.section_code AND a.question_id = b.question_id
+    JOIN iib_sq_unicode_details AS d 
+      ON d.question_id = b.question_id
+    WHERE a.question_paper_no = ? AND lang_code = ? 
+    GROUP BY b.question_id 
+    ORDER BY display_order
+  `;
+}
 
-  db.query(
-    sql,
-    [
-      encryptKey,
-      encryptKey,
-      encryptKey,
-      encryptKey,
-      encryptKey,
-      encryptKey,
-      questionPaperNo,
-    ],
-    (err, result) => {
+// Now you have your sql query depending on the value of `lang`
+
+
+const queryParams = [
+  encryptKey, // For AES_DECRYPT (question_text)
+  encryptKey, // For AES_DECRYPT (option_1)
+  encryptKey, // For AES_DECRYPT (option_2)
+  encryptKey, // For AES_DECRYPT (option_3)
+  encryptKey, // For AES_DECRYPT (option_4)
+  encryptKey, // For AES_DECRYPT (option_5)
+  questionPaperNo, // For a.question_paper_no
+];
+if (lang !== "EN") {
+  queryParams.push(lang);
+}
+
+  db.query(sql,queryParams,(err, result) => {
       if (err) {
         console.error("MySQL error:", err);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -1533,17 +1650,25 @@ app.get("/get-test-status/:membershipNo/:hostIp", (req, res) => {
   });
 });
 
-const queryAsync = (query, values) => {
+// const queryAsync = (query, values) => {
+//   return new Promise((resolve, reject) => {
+//     db.query(query, values, (err, results) => {
+//       if (err) {
+//         return reject(err);
+//       }
+//       resolve(results);
+//     });
+//   });
+// };
+function queryAsync(sql, params) {
   return new Promise((resolve, reject) => {
-    db.query(query, values, (err, results) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve(results);
+    db.query(sql, params, (err, results) => {
+      if (err) return reject(err);
+      resolve(results); // Return results directly instead of wrapping in an array
     });
   });
-};
 
+}
 app.get(
   "/handleBatchClosure/:batchId/:hostIp/:serialNumber/:centreCode",
   async (req, res) => {
@@ -4876,7 +5001,7 @@ app.get("/download-file/:status", async (req, res) => {
   //         ? "bac7a-110000"
   //         : "78192-150000"
   //       : status;
-        const file =
+  const file =
     status === "Base"
       ? process.env.CLIENT
       : status === "Act"
@@ -5086,94 +5211,515 @@ app.get("/db-patch/", async (req, res) => {
     const result = response.data; // Parse JSON response
     if (result[0] != data.db_version) {
       console.log("this file need to be downloaded" + result[1]);
-    
-    const tempDir = path.join("C:", "pro", "itest", "activate", "temp");
-    const extractDir = path.join("C:", "pro", "itest", "activate");
-    const fileName = result[1].split("/")[1];
-    console.log(fileName);
-    // Define the full path for saving the downloaded file
-    const zipFilePath = path.join(tempDir, fileName); // Using result[1] as the filename
 
-    // Create the temp directory if it doesn't exist
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
+      const tempDir = path.join("C:", "pro", "itest", "activate", "temp");
+      const extractDir = path.join("C:", "pro", "itest", "activate");
+      const fileName = result[1].split("/")[1];
+      console.log(fileName);
+      // Define the full path for saving the downloaded file
+      const zipFilePath = path.join(tempDir, fileName); // Using result[1] as the filename
 
-    try {
-      // Step 1: Download the file
-      const url = `https://demo70.sifyitest.com/livedata/${result[1]}`;
-      const response = await axios.get(url, { responseType: "stream" });
-    
-      // Step 2: Pipe the response to a write stream
-      const writer = fs.createWriteStream(zipFilePath);
-      response.data.pipe(writer);
-    
-      // Step 3: Wait for the file to be written to disk
-      await new Promise((resolve, reject) => {
-        writer.on("finish", resolve); // Resolve once finished writing
-        writer.on("error", reject); // Reject if an error occurs
-      });
-    
-      console.log("File downloaded successfully to", zipFilePath);
-    
-      // Step 4: Unzip the file
-      const zip = new AdmZip(zipFilePath);
-      zip.extractAllTo(extractDir, true);
-      console.log(`File extracted successfully to ${extractDir}`);
-    
-      const patchFilePath = path.join(extractDir, `${(fileName.split("."))[0]}.sql`);
-      // const mysqlPath = "C:/mysql5/bin/mysql.exe";
-    
-      // Escape special characters in the password if needed
-      const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
-    
-      // Construct the command
-      const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}" ${process.env.DB_NAME} < "${patchFilePath}"`;
-      
-       exec(command, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          console.error(`stderr: ${stderr}`);
-          // Only send the response if it's not already been sent
-          if (!res.headersSent) {
-            return res.status(500).send("Error importing dump file");
-          }
-        }
-        console.log(stdout);
-        if(stdout == ''){
-          fs.unlinkSync(patchFilePath);
-        }
-        // If no error, send success response (only if it's not already sent)
-        if (!res.headersSent) {
-          res.send("Patch file imported successfully");
-        }
-      });
-    
-      // Delete the zip file after everything is done
-      fs.unlinkSync(zipFilePath);
-      // patchFilePath
-    
-    } catch (err) {
-      console.error("Error:", err);
-      if (!res.headersSent) {
-        res.status(500).send("An error occurred during the process");
+      // Create the temp directory if it doesn't exist
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
       }
+
+      try {
+        // Step 1: Download the file
+        const url = `https://demo70.sifyitest.com/livedata/${result[1]}`;
+        const response = await axios.get(url, { responseType: "stream" });
+
+        // Step 2: Pipe the response to a write stream
+        const writer = fs.createWriteStream(zipFilePath);
+        response.data.pipe(writer);
+
+        // Step 3: Wait for the file to be written to disk
+        await new Promise((resolve, reject) => {
+          writer.on("finish", resolve); // Resolve once finished writing
+          writer.on("error", reject); // Reject if an error occurs
+        });
+
+        console.log("File downloaded successfully to", zipFilePath);
+
+        // Step 4: Unzip the file
+        const zip = new AdmZip(zipFilePath);
+        zip.extractAllTo(extractDir, true);
+        console.log(`File extracted successfully to ${extractDir}`);
+
+        const patchFilePath = path.join(
+          extractDir,
+          `${fileName.split(".")[0]}.sql`
+        );
+        // const mysqlPath = "C:/mysql5/bin/mysql.exe";
+
+        // Escape special characters in the password if needed
+        const escapedPassword = process.env.DB_PASSWORD.replace(/"/g, '\\"');
+
+        // Construct the command
+        const command = `"${mysqlPath}" -u ${process.env.DB_USER} --password="${escapedPassword}" ${process.env.DB_NAME} < "${patchFilePath}"`;
+
+        exec(command, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`exec error: ${error}`);
+            console.error(`stderr: ${stderr}`);
+            // Only send the response if it's not already been sent
+            if (!res.headersSent) {
+              return res.status(500).send("Error importing dump file");
+            }
+          }
+          console.log(stdout);
+          if (stdout == "") {
+            fs.unlinkSync(patchFilePath);
+          }
+          // If no error, send success response (only if it's not already sent)
+          if (!res.headersSent) {
+            res.send("Patch file imported successfully");
+          }
+        });
+
+        // Delete the zip file after everything is done
+        fs.unlinkSync(zipFilePath);
+        // patchFilePath
+      } catch (err) {
+        console.error("Error:", err);
+        if (!res.headersSent) {
+          res.status(500).send("An error occurred during the process");
+        }
+      }
+      // finally{
+      //   const patchFilePath = path.join(extractDir, `${(fileName.split("."))[0]}.sql`);
+      //   fs.unlinkSync(patchFilePath)
+      // }
+      console.log("Response from server:", result[0]); // Logs the JSON array ["7.0", "dbdump/hello.zip"]
+      res.send(result);
+    } else {
+      res.send(false);
     }
-    // finally{
-    //   const patchFilePath = path.join(extractDir, `${(fileName.split("."))[0]}.sql`);
-    //   fs.unlinkSync(patchFilePath)
-    // }
-    console.log("Response from server:", result[0]); // Logs the JSON array ["7.0", "dbdump/hello.zip"]
-    res.send(result);
-  }else{
-    res.send(false)
-  }
-     // Sends the server response back to the client
+    // Sends the server response back to the client
   } catch (error) {
     console.error("Request failed", error);
     res.status(500).send("Error sending request to server");
   }
 });
+
+/*sethu*/
+app.post('/submitFeedback', (req, res) => {
+  const { loginProcess, systemWork, techProblem, questionRating, adequateTime, screenNavigationIssue, examMethodologyRating,examCode,subjectCode,membershipNo,questionpaperno} = req.body;
+  const txtfeedback= problem_questions= '';
+  let msg = '';
+console.log(req.body.examCode);
+
+  const feedback_enable_query = "SELECT variable_value FROM exam_settings WHERE variable_name='feedback_enable'";
+  db.query(feedback_enable_query, (err, feedbackrslt) => {
+      if (err) {
+          errorlog('err95', `QUERY: ${feedback_enable_query} ${err}`);
+          return res.status(500).send('Database error');
+      }
+
+      if (examMethodologyRating) {
+          const sqlSelect = `SELECT COUNT(1) FROM iib_feedback WHERE membership_no='${membershipNo}' AND exam_code='${examCode}' AND subject_code='${subjectCode}'`;
+          db.query(sqlSelect, (err, result) => {
+              if (err) {
+                  errorlog('err05', `QUERY: ${sqlSelect} ${err}`);
+                  return res.status(500).send('Database error');
+              }
+
+              const nRows = result[0]['COUNT(1)'];
+
+              let display_questions = question_asked_twice = answer_not_relevant = question_not_display = answer_not_display = display_image_issue = Display_issue_notdisprop = Junk_Char_observed='';
+
+              if (nRows == 0) {
+                  const sqlInsert = `
+                      INSERT INTO iib_feedback (membership_no, exam_code, subject_code, login_process, system_work, tech_prob, q_rating, adeq_time, navigate_issue, rating, feedback_text, diplay_questions, problem_questions, question_asked_twice, answer_not_relevant, question_not_display, answer_not_display, display_image_issue, Display_issue_notdisprop, Junk_Char_observed) 
+                      VALUES ('${membershipNo}', '${examCode}', '${subjectCode}', '${loginProcess}', '${systemWork}', '${techProblem}', '${questionRating}', '${adequateTime}', '${screenNavigationIssue}', '${examMethodologyRating}', '${txtfeedback}', '${display_questions}', '${problem_questions}', '${question_asked_twice}', '${answer_not_relevant}', '${question_not_display}', '${answer_not_display}', '${display_image_issue}', '${Display_issue_notdisprop}', '${Junk_Char_observed}')`;
+
+                  db.query(sqlInsert, (err) => {
+                      if (err) {
+                          errorlog('err08', `QUERY: ${sqlInsert} ${err}`);
+                          return res.status(500).send('Database error');
+                      }
+                      msg = "Thank you for your feedback.";
+                      const feed = `INSERT INTO xml_feed(query) VALUES("${sqlInsert}")`;
+                      db.query(feed);
+                      res.send(msg);
+                  });
+              } else {
+                  const sqlUpdate = `
+                      UPDATE iib_feedback SET 
+                      login_process='${loginProcess}', system_work='${systemWork}', tech_prob='${techProblem}', q_rating='${questionRating}', adeq_time='${adequateTime}', navigate_issue='${screenNavigationIssue}', rating='${examMethodologyRating}', feedback_text='${txtfeedback}', diplay_questions='${display_questions}', problem_questions='${problem_questions}', question_asked_twice='${question_asked_twice}', answer_not_relevant='${answer_not_relevant}', question_not_display='${question_not_display}', answer_not_display='${answer_not_display}', display_image_issue='${display_image_issue}', Display_issue_notdisprop='${Display_issue_notdisprop}', Junk_Char_observed='${Junk_Char_observed}' 
+                      WHERE membership_no='${membershipNo}' AND exam_code='${examCode}' AND subject_code='${subjectCode}'`;
+
+                      // console.log(sqlUpdate);
+
+                  db.query(sqlUpdate, (err) => {
+                      if (err) {
+                          errorlog('err06', `QUERY: ${sqlUpdate} ${err}`);
+                          return res.status(500).send('Database error');
+                      }
+                      msg = "Thank you for your feedback.";
+                      const feed = `INSERT INTO xml_feed(query) VALUES("${sqlUpdate}")`;
+                      db.query(feed);
+                      res.send(msg);
+                  });
+              }
+          });
+      }
+  });
+});
+
+app.get("/candidate-score-responses/:rollNum", async (req, res) => {
+  const { rollNum } = req.params;
+
+  try {
+    // Get distinct exams for the candidate
+    const examCodeQuery = `
+    SELECT DISTINCT e.exam_code, e.exam_name 
+    FROM iib_exam e, iib_candidate_scores s 
+    WHERE s.exam_code = e.exam_code AND online = 'Y' AND membership_no = ?`;
+  const rowsExam = await queryAsync(examCodeQuery, [rollNum]);
+
+  
+    // Iterate through each exam
+    for (const rowExam of rowsExam) {
+      const { exam_code: examCode, exam_name: examName } = rowExam;
+
+      // Get distinct subjects for the candidate's exam
+      const subjectCodeQuery = `
+        SELECT DISTINCT e.subject_code, e.subject_name 
+        FROM iib_exam_subjects e, iib_candidate_scores s 
+        WHERE e.subject_code = s.subject_code 
+          AND online = 'Y' 
+          AND e.exam_code = ? 
+          AND membership_no = ?`;
+      const rowsSubject = await queryAsync(subjectCodeQuery, [examCode, rollNum]);
+
+      for (const rowSubject of rowsSubject) {
+        const { subject_code: subjectCode, subject_name: subjectName } = rowSubject;
+
+        // Get the candidate's question paper number
+        const sqlQuestions = `
+          SELECT question_paper_no 
+          FROM iib_candidate_test 
+          WHERE exam_code = ? 
+            AND subject_code = ? 
+            AND test_status = 'C' 
+            AND membership_no = ?`;
+        const rowsSelQues = await queryAsync(sqlQuestions, [examCode, subjectCode, rollNum]);
+
+        for (const rowSelQues of rowsSelQues) {
+          const questionPaperNo = rowSelQues.question_paper_no;
+         // Get exam marks and other details
+          const sqlMarks = `
+            SELECT total_marks, pass_mark, display_response 
+            FROM iib_exam_subjects 
+            WHERE exam_code = ? 
+              AND subject_code = ? 
+              AND online = 'Y'`;
+          const rowsSqlMarks = await queryAsync(sqlMarks, [examCode, subjectCode]);
+          const displayResponse = rowsSqlMarks[0]['display_response'];
+
+          // console.log('display_response',display_response);
+
+          // Retrieve list of question IDs
+          const sqlQnsIds = `
+          SELECT question_id , display_order
+          FROM iib_question_paper_details 
+          WHERE question_paper_no = ? 
+          ORDER BY display_order`;
+        const rowsSqlQnsIds = await queryAsync(sqlQnsIds, [questionPaperNo]);
+        const quesIdsArr = rowsSqlQnsIds.map(row => row.question_id);
+        // console.log('Question_id',quesIdsArr);
+//         // const quesIdsArrdis = rowsSqlQnsIds.map(row => row.display_order);
+// Step 1: Fetch all response data for `questionPaperNo` from `iib_response`
+const sqlQns = `
+  SELECT question_id, answer, display_order 
+  FROM iib_response 
+  WHERE id IN (
+    SELECT MAX(id) 
+    FROM iib_response 
+    WHERE question_paper_no = ? AND answer != 'NULL'
+    GROUP BY question_id
+  ) 
+  ORDER BY display_order
+`;
+const rowsSqlQns = await queryAsync(sqlQns, [questionPaperNo]);
+// console.log("Response data:", rowsSqlQns);
+
+// Step 2: Fetch correct answers for all questions in `quesIdsArr`
+const aQuestionsSql = `
+  SELECT question_id, correct_answer 
+  FROM iib_sq_details 
+  WHERE question_id IN (${quesIdsArr.join(",")})
+`;
+const rowsSqlQnsIdsVal = await queryAsync(aQuestionsSql);
+// console.log("Correct answers:", rowsSqlQnsIdsVal);
+
+// Step 3: Merge both datasets based on `question_id`, ensuring every question has a `correct_answer`
+const CandidateResponse = quesIdsArr.map(question_id => {
+  const response = rowsSqlQns.find(item => item.question_id === question_id);
+  const correctAnswer = rowsSqlQnsIdsVal.find(
+    item => item.question_id === question_id
+  );
+
+  return {
+    question_id,
+    answer: response ? response.answer : '-',
+    display_order: response ? response.display_order : '-',
+    correct_answer: correctAnswer ? correctAnswer.correct_answer : '-'
+  };
+});
+
+// console.log("Merged Data with All Correct Answers:", CandidateResponse);
+const Questioncount=rowsSqlQnsIdsVal.length;
+const attendedQusCount=rowsSqlQns.length;
+console.log(Questioncount);
+res.json({
+  Questioncount,
+  attendedQusCount,
+  CandidateResponse,
+  displayResponse
+})
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error querying the database:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+app.post('/exam-closure-summary', (req, res) => {
+  const data = req.body;
+
+  // Extract and validate necessary variables
+  const {
+    ExamName = '', 
+    ExamDate = '', 
+    CentreCode = '', 
+    ServerNo = '', 
+    AdminId = '172.17.109.2',
+    SerialNumber = '',
+    feedback, 
+    attachFile, 
+    ...formFields
+  } = data;
+
+  const currentTimestamp = new Date(); // Generate current timestamp
+
+  // console.log(ExamDate);
+
+  // Define your SQL Insert Query
+  const insertQuery = `INSERT INTO exam_day_end_report (exam_name, exam_date, centre_code, server_no, batch1_scheduled, batch2_scheduled, batch3_scheduled, batch1_attended, batch2_attended, batch3_attended, test_lab, test_admin, without_admit_card, without_id_proof, without_admit_card_id_proof, test_reporting_late, request_centre_change, test_malpractice, updated_ip, updated_on, updated_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  // Prepare values from the form data
+  const values = [
+    ExamName, ExamDate, CentreCode, ServerNo,
+    formFields.candidateBatch1Scheduled, formFields.candidateBatch2Scheduled, formFields.candidateBatch3Scheduled,
+    formFields.candidateBatch1Attended, formFields.candidateBatch2Attended, formFields.candidateBatch3Attended,
+    formFields.labsUsed, formFields.testAdministrators,
+    formFields.candidatesWithoutAdmitCard, formFields.candidatesWithoutIdentityProof, formFields.candidatesWithoutAdmitCardAndIdentityProof,
+    formFields.candidatesReportingLate, formFields.candidatesRequestingCentreChange, formFields.candidatesIndulgingInMalpractice,
+    AdminId, currentTimestamp, SerialNumber, 'S'
+  ];
+
+  // Log for debugging
+  console.log('Inserting data:', values);
+
+  // Execute query
+  db.query(insertQuery, values, (err, result) => {
+    if (err) {
+      console.error('Error inserting data:', err);
+      return res.status(500).json({ message: 'Error inserting data', error: err });
+    }
+    res.json({ message: 'Data inserted successfully' });
+  });
+});
+
+
+app.get('/get-exam-date', (req, res) => {
+  const sqlDate = "SELECT DISTINCT exam_date FROM iib_exam_schedule ORDER BY exam_date";
+  db.query(sqlDate, (error, results) => {
+      if (error) {
+          return callback(error, null);
+      }
+
+      if (results.length === 1) {
+          const eDateRaw = results[0].exam_date;
+          const eDate = eDateRaw instanceof Date ? eDateRaw.toISOString().split("T")[0] : eDateRaw; // Ensure it's in YYYY-MM-DD format
+
+          if (typeof eDate === "string" && eDate.includes("-")) {
+              const [year, month, day] = eDate.split("-");
+              const dispDate = `${day}-${month}-${year}`;
+              res.status(200).json({ exam_date: eDate, display_date: dispDate });
+          } else {
+            res.status(400).json(new Error("Invalid date format"));
+          }
+      } else {
+          const today = new Date();
+          const exam_date = today.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+          // callback(null, { exam_date });
+          res.status(200).json({ exam_date: exam_date});
+      }
+  });
+});
+
+
+app.get('/get-center-server-details', async (req, res) => {
+  const selAutoFeed = "SELECT center_code, serverno FROM autofeed";
+
+  try {
+    const rowsSelAutoFeed = await new Promise((resolve, reject) => {
+      db.query(selAutoFeed, (err, results) => {
+        if (err) {
+          console.error("Error querying the database:", err);
+          return reject(new Error("Internal Server Error"));
+        }
+        resolve(results);
+      });
+    });
+
+    if (rowsSelAutoFeed.length === 0) {
+      return res.status(404).json({ message: "No data found in autofeed table" });
+    }
+
+    // Prepare result
+    const result = {
+      center_code: rowsSelAutoFeed[0].center_code,
+      serverno: rowsSelAutoFeed[0].serverno,
+    };
+  // console.log(result);
+    res.json(result); // Send result as JSON response
+  } catch (error) {
+    console.error("Error fetching center and server details:", error);
+    res.status(500).json({ message: error.message }); // Send error response
+  }
+});
+
+app.get('/get-exam-details', async (req, res) => {
+  const selExam = "select exam_code,exam_name from iib_exam";
+
+  try {
+    const rowsExam = await new Promise((resolve, reject) => {
+      db.query(selExam, (err, results) => {
+        if (err) {
+          console.error("Error querying the database:", err);
+          return reject(new Error("Internal Server Error"));
+        }
+        resolve(results);
+      });
+    });
+
+    if (rowsExam.length === 0) {
+      return res.status(404).json({ message: "No data found in iib_exam table" });
+    }
+
+    // Prepare result
+    const result = {
+      exam_code: rowsExam[0].exam_code,
+      exam_name: rowsExam[0].exam_name,
+    };
+  // console.log(result);
+    res.json(result); // Send result as JSON response
+  } catch (error) {
+    console.error("Error fetching exam details:", error);
+    res.status(500).json({ message: error.message }); // Send error response
+  }
+});
+
+const session = {
+  ta_override: "N",
+  mc: "EN", // Example medium code from session
+};
+
+
+app.get("/medium-settings/:SubjectCode", (req, res) => {
+  const { SubjectCode } = req.params;
+  console.log("SubjectCode:", SubjectCode);
+
+  const mediumSettingsSql = `
+    SELECT variable_name, variable_value FROM exam_settings 
+    WHERE variable_name='display_medium' OR variable_name='display_medium_dropdown'
+  `;
+
+  const sublanguagesSql = `SELECT languages FROM iib_exam_subjects WHERE subject_code = ?`;
+
+  db.query(sublanguagesSql, [SubjectCode], (err, sublanguagesResult) => {
+    if (err) {
+      console.error("Database query failed:", err.message);
+      res.status(500).send("An error occurred while retrieving languages.");
+      return;
+    }
+
+    if (sublanguagesResult.length === 0) {
+      console.warn("No languages found for the provided subject code.");
+      res.status(404).send("No languages found for the specified subject code.");
+      return;
+    }
+
+    // Split the languages string into an array of codes
+    const mediumlanguages = sublanguagesResult
+      .map((row) => row.languages.split(","))
+      .flat();
+    console.log("Retrieved languages:", mediumlanguages);
+
+    // Fetch medium settings
+    db.query(mediumSettingsSql, (err, mediumSettingsResult) => {
+      if (err) {
+        console.error("Database query failed:", err);
+        res.status(500).send("Database error");
+        return;
+      }
+
+      const mediumSettings = {
+        display_medium: "",
+        display_medium_dropdown: "",
+      };
+
+      mediumSettingsResult.forEach((row) => {
+        mediumSettings[row.variable_name] = row.variable_value;
+      });
+
+      // Fetch active languages
+      const languagesSql = `
+        SELECT lang_code, lang_name 
+        FROM iib_languages 
+        WHERE is_active = 'Y' AND lang_code IN (?)
+      `;
+
+      // Filter active languages based on mediumlanguages
+      db.query(languagesSql, [mediumlanguages], (err, languagesResult) => {
+        if (err) {
+          console.error("Database query failed:", err);
+          res.status(500).send("Database error");
+          return;
+        }
+
+        // Construct the arrLang and subjectLanguages dynamically
+        const arrLang = {};
+        const subjectLanguages = [];
+
+        languagesResult.forEach((row) => {
+          arrLang[row.lang_code] = row.lang_name;
+          subjectLanguages.push(row.lang_code);
+        });
+
+        const mediumCode = "EN"; // Example selected language code
+
+        // Respond with all required data
+        res.json({
+          mediumSettings,
+          subjectLanguages,
+          mediumCode,
+          arrLang,
+          session,
+        });
+      });
+    });
+  });
+});
+/*sethu*/
+
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

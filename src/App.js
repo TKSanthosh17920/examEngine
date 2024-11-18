@@ -16,6 +16,7 @@ import CalculatorAndRoughSheet from './components/CalculatorAndRoughSheet'; // Y
 import InternetSpeedChecker from './components/InternetSpeedChecker'; // Your RoughSheet component
 
 import NotFound from './components/NotFound'; 
+import CandidateFeedback from './components/CandidateFeedback'; // Your ExamForm component
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/upload" element={<UploadFile/>} />
           <Route path="/activate" element={<InternetSpeedChecker/>} />
           <Route path="*" element={<NotFound />} />  {/* Catch-all route */}
+          <Route path="/feedback" element={<CandidateFeedback/>} />
         </Routes>
         
       </div>
