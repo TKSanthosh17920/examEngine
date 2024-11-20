@@ -13,6 +13,7 @@ import ServerStatus from "./ServerStatus"; // Import the NumberPalette component
 import "./Button.css";
 import { formatTime, getCurrentFormattedTime, fetchClientIp } from "./utils";
 import exit from "./assets/images/exit.png";
+import RenderOptions from "./RenderOptions";
 
 const ExamForm = () => {
   const [candidateInfo, setCandidateInfo] = useState({});
@@ -405,7 +406,7 @@ const ExamForm = () => {
                         fontSize: `${fontSize}px`,
                       }}
                     >
-                      <RenderHtmlContent
+                      <RenderOptions
                         className="optiontext"
                         htmlString={option.text}
                       />
@@ -459,7 +460,7 @@ const ExamForm = () => {
                 <div className="main">
                   <div className="watermark">{watermarks}</div>
                   <span className="qtext" style={{ fontSize: `${fontSize}px` }}>
-                    <RenderHtmlContent htmlString={currentQuestion.text} />
+                    <RenderHtmlContent htmlString={currentQuestion.text} caseId = {currentQuestion.case_id} caseText = {currentQuestion.case_text} questionType = {currentQuestion.question_type}/>
                   </span>
                   {/* Render options here */}
 

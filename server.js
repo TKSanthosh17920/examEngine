@@ -1113,6 +1113,10 @@ if (lang == "EN") {
       b.correct_answer, 
       b.marks, 
       b.negative_marks, 
+      b.case_id,
+      b.subject_code,
+      b.section_code,
+      b.question_type,
       c.*
     FROM iib_question_paper_details AS a
     JOIN iib_sq_details AS b 
@@ -1136,7 +1140,8 @@ if (lang == "EN") {
       AES_DECRYPT(d.option_5, ?) AS option_5, 
       b.correct_answer, 
       b.marks, 
-      b.negative_marks, 
+      b.negative_marks,
+      b.case_id, 
       c.*
     FROM iib_question_paper_details AS a
     JOIN iib_sq_details AS b 
@@ -1166,33 +1171,90 @@ const queryParams = [
 if (lang !== "EN") {
   queryParams.push(lang);
 }
-
-  db.query(sql,queryParams,(err, result) => {
+const getCaseQuestionText =  (case_id, subject_code,section_code,lang)=>{
+  
+  if(case_id > 0 && case_id != null){
+  try{
+    console.log(typeof(case_id),case_id, subject_code,section_code)
+    let getCaseText;
+    if(lang == 'EN'){
+       getCaseText = "select AES_DECRYPT(case_text,?) as case_text from iib_sc_details where case_id = ? and subject_code = ? and section_code = ?";
+    }else{
+      getCaseText = "select AES_DECRYPT(case_text,?) as case_text from iib_sc_unicode_details where case_id = ? and subject_code = ? and section_code = ? and lang_code = ?";
+    }
+  
+  return new Promise((resolve,reject)=>{
+    db.query(getCaseText,[encryptKey,case_id,subject_code,section_code,lang],(err,result)=>{
+      if(err){
+        console.error("MySQL error:", err);
+        return reject(res.status(500).json({ error: "Internal Server Error" }));
+      }else{
+        console.log(result[0].case_text.toString())
+        return resolve(result[0].case_text.toString())
+      }
+    })
+  })
+}catch(err){
+  console.error(err)
+}
+}else{
+  return '';
+}
+}
+// const gatherCaseQuestion= async (case_id, subject_code,section_code)=>{
+//     return await getCaseQuestionText(case_id, subject_code,section_code)
+// }
+  db.query(sql,queryParams,async (err, result) => {
       if (err) {
         console.error("MySQL error:", err);
         return res.status(500).json({ error: "Internal Server Error" });
       } else {
-        const resultdata = result.map((question, index) => ({
-          id: question.question_id,
-          // id: index + 1,
-          text: decode(question.question_text),
-          subject_code: question.subject_code,
-          section_name: question.section_name,
-          answer_order: question.answer_order,
-          options: [
-            { id: "a", text: decode(question.option_1) },
-            { id: "b", text: decode(question.option_2) },
-            { id: "c", text: decode(question.option_3) },
-            { id: "d", text: decode(question.option_4) },
-            { id: "e", text: decode(question.option_5) },
+        // const resultdata = result.map( (question, index) => ({
+        //   id: question.question_id,
+        //   // id: index + 1,
+        //   text: decode(question.question_text),
+        //   subject_code: question.subject_code,
+        //   section_name: question.section_name,
+        //   answer_order: question.answer_order,
+        //   case_id:question.case_id,
+        //   case_text: gatherCaseQuestion(question.case_id,question.subject_code,question.section_code),
+        //   options: [
+        //     { id: "a", text: decode(question.option_1) },
+        //     { id: "b", text: decode(question.option_2) },
+        //     { id: "c", text: decode(question.option_3) },
+        //     { id: "d", text: decode(question.option_4) },
+        //     { id: "e", text: decode(question.option_5) },
 
-          ],
-          correct_ans: Number(question.correct_answer),
-          // correct_ans: 2,
+        //   ],
+        //   correct_ans: Number(question.correct_answer),
+        //   // correct_ans: 2,
 
-          mark: question.marks,
-          negative_mark: question.negative_marks,
-        }));
+        //   mark: question.marks,
+        //   negative_mark: question.negative_marks,
+        // }));
+        const resultdata = await Promise.all(
+          result.map(async (question) => ({
+            id: question.question_id,
+            text: decode(question.question_text),
+            subject_code: question.subject_code,
+            section_name: question.section_name,
+            answer_order: question.answer_order,
+            case_id: question.case_id,
+            case_text: decode(await getCaseQuestionText(question.case_id, question.subject_code, question.section_code,lang)),
+            options: [
+              { id: "a", text: decode(question.option_1) },
+              { id: "b", text: decode(question.option_2) },
+              { id: "c", text: decode(question.option_3) },
+              { id: "d", text: decode(question.option_4) },
+              { id: "e", text: decode(question.option_5) },
+            ],
+            correct_ans: Number(question.correct_answer),
+            mark: question.marks,
+            negative_mark: question.negative_marks,
+            question_type : question.question_type,
+          }))
+        );
+        
         //   console.log(resultdata);
         res.json(resultdata);
       }
