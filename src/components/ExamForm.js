@@ -14,6 +14,7 @@ import "./Button.css";
 import { formatTime, getCurrentFormattedTime, fetchClientIp } from "./utils";
 import exit from "./assets/images/exit.png";
 import RenderOptions from "./RenderOptions";
+import { Button, TextField } from "@mui/material";
 
 const ExamForm = () => {
   const [candidateInfo, setCandidateInfo] = useState({});
@@ -38,6 +39,8 @@ const ExamForm = () => {
   const [Questioncount, setQuestioncount] = useState(0);
   const [displayResponse, setdisplayResponse] = useState([]);
   const [CandidateResponse, setCandidateResponse] = useState([]);
+  const [dqAnswer, setDqAnswer] = useState("");
+  const [currentDqAnswer, setCurrentDqAnswer] = useState("");
 
   const ShowCandidateResponse = async () => {
     // alert(candidateInfo.user);
@@ -254,10 +257,10 @@ const ExamForm = () => {
 
         Object.keys(data).forEach((questionId) => {
           // answers[questionId] = Number(data[questionId].answer);
-          const answerValue = Number(data[questionId].answer);
+          const answerValue = (data[questionId].answer);
           // console.log('ansVal',answerValue);
 
-          if (answerValue !== 0 && !isNaN(answerValue)) {
+          if (answerValue !== 0 && answerValue != 'NULL') {
             answers[questionId] = answerValue;
           }
           if (data[questionId].tag == "Y") {
@@ -333,7 +336,7 @@ const ExamForm = () => {
       ...prevAnswers,
       [questionId]: optionId,
     }));
-
+    // setCurrentDqAnswer(optionId)
     console.log("question-id", questionId, "   answer-", optionId);
   };
 
@@ -420,7 +423,10 @@ const ExamForm = () => {
       </table>
     );
   };
-
+const setValueForDq=(questId)=>{
+  const variable1 = document.getElementById(`question_${questId}`)
+  variable1.value = answers[questId];
+}
   const renderCurrentQuestion = () => {
     // console.log('tagg',tagquestions);
     const currentQuestion = questions[currentQuestionIndex];
@@ -460,15 +466,65 @@ const ExamForm = () => {
                 <div className="main">
                   <div className="watermark">{watermarks}</div>
                   <span className="qtext" style={{ fontSize: `${fontSize}px` }}>
-                    <RenderHtmlContent htmlString={currentQuestion.text} caseId = {currentQuestion.case_id} caseText = {currentQuestion.case_text} questionType = {currentQuestion.question_type}/>
+                    <RenderHtmlContent
+                      htmlString={currentQuestion.text}
+                      caseId={currentQuestion.case_id}
+                      caseText={currentQuestion.case_text}
+                      questionType={currentQuestion.question_type}
+                    />
                   </span>
-                  {/* Render options here */}
+                  
+                  {currentQuestion.question_type == "DQ" ? (
+                    <div key={incrementingId}>
+                      <>
+                        {/* MUI TextField as a textarea */}
+                        <textarea
+                          className="mt-3 mx-2"
+                          placeholder="Enter your answer here"
+                          rows="4"
+                          value = {answers[incrementingId] || ""}
+                          id = {`question_${incrementingId}`}
+                          name={`question_${incrementingId}`}
+                          onChange={(e) => {
+                            handleOptionChange(incrementingId, e.target.value)
+                            setDqAnswer( e.target.value);
+                          }}
+                          style={{
+                            width: "100%", // Full width
+                            border: "1px solid #ccc",
+                            borderRadius: "4px",
+                            padding: "8px",
+                            color: "black",
+                            fontSize: "16px",
+                          }}
+                        ></textarea>
 
-                  {renderOptions(
-                    currentQuestion.options,
-                    incrementingId,
-                    currentQuestion.answer_order
+                        <br />
+                        {/* MUI Button for form submission */}
+                        <input
+                          type="button"
+                          className="mx-2"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleOptionChange(incrementingId, dqAnswer);
+                            setValueForDq(incrementingId)
+                            setDqAnswer("");
+                          }}
+                          style={{ marginTop: "16px" }}
+                          value="Submit" // Use value for the button text
+                        />
+                      </>
+                    </div>
+                  ) : (
+                    <>
+                      {renderOptions(
+                        currentQuestion.options,
+                        incrementingId,
+                        currentQuestion.answer_order
+                      )}
+                    </>
                   )}
+                  {/* Render options here */}
                 </div>
               </div>
             </div>
@@ -481,6 +537,8 @@ const ExamForm = () => {
   const handleNextQuestion = async () => {
     // console.log('select tag',tagquestions);
     setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+
+    console.log(JSON.stringify(answers) + "entered answer ");
     const entries = Object.entries(answers);
     const currentqp = currentQuestionIndex + 1;
     const tagqpindex = currentqp + 1;

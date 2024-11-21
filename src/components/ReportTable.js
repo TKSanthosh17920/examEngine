@@ -36,11 +36,11 @@ const bioReports = [
 const miscellaneousReports = [
 // { id: 1, name: 'Change Bulk Time Slot'},
 { id: 2, name: 'Change Medium'},
-{ id: 3, name: 'Candidate Score generation'}, 
+// { id: 3, name: 'Candidate Score generation'}, 
 { id: 4, name: 'Image Download'},
 { id: 5, name: 'DB Patch update'},
 { id: 6, name: 'Bulk Time Extension'},
-{ id: 7, name: 'Scanner Upload'},
+// { id: 7, name: 'Scanner Upload'},
 { id: 8, name: 'Grace Time Extension'}, 
 
 ];

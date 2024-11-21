@@ -17,28 +17,7 @@ const RenderHtmlContent1 = ({ htmlString, caseId, caseText, questionType }) => {
             style={{ marginLeft: "26px", marginTop: "-23px" }}
             dangerouslySetInnerHTML={{ __html: decodedHtml }}
           />
-          <form style={{ width: "100%" }}>
-            {/* MUI TextField as a textarea */}
-            <TextField
-              className="mt-3 mx-2" label="Enter your answer here" multiline rows={4} 
-              // value={text}
-              // onChange={handleChange}
-              variant="outlined"
-              fullWidth
-              color = "black"
-            />
-            <br />
-            {/* MUI Button for form submission */}
-            <Button
-              type="submit"
-              variant="contained"
-              color="success"
-              className="mx-2"
-              style={{ marginTop: "16px" }}
-            >
-              Submit
-            </Button>
-          </form>
+          
         </div>
       ) : caseId > 0 ? (
         <div className="container">

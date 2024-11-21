@@ -749,11 +749,27 @@ app.post("/response", (req, res) => {
       console.error("Transaction error:", err);
       return res.status(500).json({ message: "Internal Server Error" });
     }
+    const getQuestionType=(questionId)=>{
+      const query = "select question_type from iib_sq_details where question_id = ?";
+      return new Promise((resolve,reject)=>{
+        db.query(query,[questionId],(err,res)=>{
+          if (err) {
+            console.error("Error querying the database:", err);
+            res.status(500).json({ error: "Internal Server Error" });
+            return reject();
+          }
+          return resolve(res[0].question_type)
+        })
+      })
+}
+const quesType = getQuestionType(questionId);
 
     // Format the insert query
     const insertResponseSql =
       "INSERT INTO iib_response (question_paper_no, question_id, answer, display_order, tag, host_ip, updatedtime, clienttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    const formattedInsertResponseSql = db.format(insertResponseSql, [
+      let formattedInsertResponseSql
+      if(quesType != 'DQ'){
+    formattedInsertResponseSql = db.format(insertResponseSql, [
       qpno,
       questionId,
       answer,
@@ -763,15 +779,43 @@ app.post("/response", (req, res) => {
       updatedtime,
       clienttime,
     ]);
-
-    db.query(formattedInsertResponseSql, (err, result) => {
+  }else if (quesType == 'DQ'){
+    formattedInsertResponseSql = db.format(insertResponseSql, [
+      qpno,
+      questionId,
+      'DQ',
+      displayorder,
+      tag,
+      hostip,
+      updatedtime,
+      clienttime,
+    ]);
+  }
+  const insertIntoDqTable = (lastInsertedId,questionId,qpno,answer)=>{
+    const query = "insert into descriptive_answer(response_id,question_id,question_paper_no,desc_ans) values (?,?,?,?)"
+    return new Promise((resolve,reject)=>{
+    db.query(query,[lastInsertedId,questionId,qpno,answer],(err,res)=>{
+      if(err){
+        return reject(db.rollback(() => {
+          console.error("MySQL insert error:", err);
+          res.status(500).json({ message: "Internal Server Error" });
+        }));
+      }
+      return resolve();
+    })
+    })
+  }
+    db.query(formattedInsertResponseSql, async (err, result) => {
       if (err) {
         return db.rollback(() => {
           console.error("MySQL insert error:", err);
           res.status(500).json({ message: "Internal Server Error" });
         });
+        
       }
-
+      const lastInsertedId = result.insertId;
+      await insertIntoDqTable(lastInsertedId,questionId,qpno,answer)
+      
       // Insert the exact formatted query into xml_feed
       insertIntoXmlFeed(formattedInsertResponseSql, (err) => {
         if (err) {
@@ -1303,18 +1347,35 @@ app.get("/initialAnswers/:questionPaperNo", (req, res) => {
   if (!questionPaperNo) {
     return res.status(400).json({ error: "Invalid questionPaperNo parameter" });
   }
-  const sql = `SELECT display_order, answer, tag FROM iib_response AS r1 WHERE r1.answer IS NOT NULL  AND r1.question_paper_no = ? AND  r1.id = ( SELECT MAX(r2.id) FROM iib_response AS r2 WHERE r2.question_id = r1.question_id  AND r2.question_paper_no = ?)`;
+  const getCorrectAns = (answer,quesId,qpno)=>{
+    if(answer == 'DQ'){
+      return answer;
+    }else{
+      const query = "select answer from descriptive_answer where question_id = ? and question_paper_no = ? and response_id = (select max(response_id) from descriptive_answer where question_id = ? and question_paper_no = ?)"
+      return new Promise((resolve,reject)=>{
+        db.query(query,[quesId,qpno,quesId,qpno],(err,res)=>{
+          if (err) {
+            console.error("MySQL query error:", err);
+            return reject(res.status(500).json({ message: "Internal Server Error" }));
+          }
+          return resolve(res[0].answer)
+        })
+      })
+      
+    }
+  }
+
+  const sql = `SELECT display_order, answer, tag, question_id, question_paper_no FROM iib_response AS r1 WHERE r1.answer IS NOT NULL  AND r1.question_paper_no = ? AND  r1.id = ( SELECT MAX(r2.id) FROM iib_response AS r2 WHERE r2.question_id = r1.question_id  AND r2.question_paper_no = ?)`;
 
   db.query(sql, [questionPaperNo, questionPaperNo], (err, results) => {
     if (err) {
       console.error("MySQL query error:", err);
       return res.status(500).json({ message: "Internal Server Error" });
     }
-
     // Format the results into the desired object
     const formattedAnswers = results.reduce((acc, curr) => {
       acc[curr.display_order] = {
-        answer: curr.answer,
+        answer: getCorrectAns(curr.answer,curr.question_id,curr.question_paper_no),
         tag: curr.tag,
       };
       return acc;
