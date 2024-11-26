@@ -744,7 +744,7 @@ app.post("/response", (req, res) => {
       .json({ status: "400", message: "All fields are required" });
   }
   const time_taken = totalTime - clienttime;
-  db.beginTransaction((err) => {
+  db.beginTransaction(async (err) => {
     if (err) {
       console.error("Transaction error:", err);
       return res.status(500).json({ message: "Internal Server Error" });
@@ -758,12 +758,12 @@ app.post("/response", (req, res) => {
             res.status(500).json({ error: "Internal Server Error" });
             return reject();
           }
+          console.log(res[0].question_type)
           return resolve(res[0].question_type)
         })
       })
 }
-const quesType = getQuestionType(questionId);
-
+const quesType = await getQuestionType(questionId);
     // Format the insert query
     const insertResponseSql =
       "INSERT INTO iib_response (question_paper_no, question_id, answer, display_order, tag, host_ip, updatedtime, clienttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -1342,45 +1342,56 @@ app.get("/fetch-sign/:membershipno", (req, res) => {
 });
 
 // Example route to return initial answers
-app.get("/initialAnswers/:questionPaperNo", (req, res) => {
+app.get("/initialAnswers/:questionPaperNo", async (req, res) => {
   const questionPaperNo = req.params.questionPaperNo;
   if (!questionPaperNo) {
     return res.status(400).json({ error: "Invalid questionPaperNo parameter" });
   }
-  const getCorrectAns = (answer,quesId,qpno)=>{
-    if(answer == 'DQ'){
-      return answer;
-    }else{
-      const query = "select answer from descriptive_answer where question_id = ? and question_paper_no = ? and response_id = (select max(response_id) from descriptive_answer where question_id = ? and question_paper_no = ?)"
+  const getCorrectAns = async (answer,quesId,qpno)=>{
+      console.log(answer + typeof answer)
+     if(answer == 'DQ'){
+      console.log("hi naan dq la irunthu pesure")
+      const query = "select desc_ans from descriptive_answer where question_id = ? and question_paper_no = ? and response_id = (select max(response_id) from descriptive_answer where question_id = ? and question_paper_no = ?)"
       return new Promise((resolve,reject)=>{
         db.query(query,[quesId,qpno,quesId,qpno],(err,res)=>{
           if (err) {
             console.error("MySQL query error:", err);
             return reject(res.status(500).json({ message: "Internal Server Error" }));
           }
-          return resolve(res[0].answer)
+          console.log(res[0].desc_ans)
+          return resolve(res[0].desc_ans)
         })
       })
       
     }
+    if(answer != 'DQ' ){
+      if(answer != 'NULL'){
+        return parseInt(answer, 10);
+      }else{
+        console.log(answer +"frok else condition")
+        return answer
+      }
+  }
   }
 
   const sql = `SELECT display_order, answer, tag, question_id, question_paper_no FROM iib_response AS r1 WHERE r1.answer IS NOT NULL  AND r1.question_paper_no = ? AND  r1.id = ( SELECT MAX(r2.id) FROM iib_response AS r2 WHERE r2.question_id = r1.question_id  AND r2.question_paper_no = ?)`;
 
-  db.query(sql, [questionPaperNo, questionPaperNo], (err, results) => {
+  db.query(sql, [questionPaperNo, questionPaperNo], async (err, results) => {
     if (err) {
       console.error("MySQL query error:", err);
       return res.status(500).json({ message: "Internal Server Error" });
     }
     // Format the results into the desired object
-    const formattedAnswers = results.reduce((acc, curr) => {
+    const formattedAnswers = await results.reduce(async (accPromise, curr) => {
+      const acc = await accPromise; // Wait for the accumulator to resolve
       acc[curr.display_order] = {
-        answer: getCorrectAns(curr.answer,curr.question_id,curr.question_paper_no),
+        answer: await getCorrectAns(curr.answer, curr.question_id, curr.question_paper_no),
         tag: curr.tag,
       };
       return acc;
-    }, {});
-    // console.log(formattedAnswers);
+    }, Promise.resolve({}));
+    
+    // console.log("formattedAnswers"+formattedAnswers);
     res.json(formattedAnswers);
   });
 });

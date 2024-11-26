@@ -3,11 +3,18 @@ import PropTypes from 'prop-types';
 import './NumberPalette.css'; // Add CSS for styling if needed
 import CalculatorAndRoughSheet from './CalculatorAndRoughSheet'; // Import the CalculatorAndRoughSheet component
 import SciCalculatorAndRoughSheet from './SciCalculatorAndRoughSheet'; // Import the CalculatorAndRoughSheet component
-
-const NumberPalette = ({ totalQuestions, currentQuestionIndex, answeredQuestions, onQuestionSelect, taggedQuestions, MembershipNo, QuestionPNo, SubjectCode , ExamDate, Calculator, RoughtSheet }) => {
+import RenderAlertForNotSaving from "./RenderAlertForNotSaving"
+const NumberPalette = ({ totalQuestions, currentQuestionIndex, answeredQuestions, onQuestionSelect, taggedQuestions, MembershipNo, QuestionPNo, SubjectCode , ExamDate, Calculator, RoughtSheet,Questions,isSaveDisabled }) => {
   const handleQuestionSelect = (index) => {
-    onQuestionSelect(index);
+    if(Questions[currentQuestionIndex].question_type == 'DQ' && isSaveDisabled == false){
+      alert("Save answer before changing questions")
+    }else{
+     onQuestionSelect(index);
+  }
   };
+  const handleDataFromRenderAlert=()=>{
+
+  }
 
   const answerConvNum = answeredQuestions.map(Number);
   const anstagged = answerConvNum.filter(element => taggedQuestions.includes(element)).length;

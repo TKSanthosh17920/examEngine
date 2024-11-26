@@ -15,6 +15,7 @@ import { formatTime, getCurrentFormattedTime, fetchClientIp } from "./utils";
 import exit from "./assets/images/exit.png";
 import RenderOptions from "./RenderOptions";
 import { Button, TextField } from "@mui/material";
+import RenderAlertForNotSaving from "./RenderAlertForNotSaving";
 
 const ExamForm = () => {
   const [candidateInfo, setCandidateInfo] = useState({});
@@ -41,6 +42,8 @@ const ExamForm = () => {
   const [CandidateResponse, setCandidateResponse] = useState([]);
   const [dqAnswer, setDqAnswer] = useState("");
   const [currentDqAnswer, setCurrentDqAnswer] = useState("");
+  const [isSaveDisabled, setIsSaveDisabled] = useState(true);
+  const [renderNotSavingAlert,setRenderNotSavingAlert] = useState(false)
 
   const ShowCandidateResponse = async () => {
     // alert(candidateInfo.user);
@@ -88,6 +91,21 @@ const ExamForm = () => {
   const decreaseFontSize = () => {
     setFontSize((prevSize) => Math.max(prevSize - 2, 10)); // Decrease font size by 2px, but not below 10px
   };
+
+  // const handleNextQuestionAndSaveAnswer=()=>{
+  //   let nextQuestionClicked = false;
+  //   const saveAnswerId = document.getElementById("saveAnswer");
+  //   alert(saveAnswerId);
+  //   // nextQuestionId.addEventListener('click',()=>{
+  //   //   alert("hello")
+  //   //   nextQuestionClicked = true;
+  //   // })
+  //   // let saveButton = document.getElementById("saveAnswer");
+  //   if(!saveAnswerId.disabled){
+  //     alert("save and go")
+  //     return false
+  //   }
+  // }
   useEffect(() => {
     // Retrieve data from sessionStorage
     const userAuthData = sessionStorage.getItem("candidateInfo");
@@ -250,7 +268,6 @@ const ExamForm = () => {
           `http://localhost:5000/initialAnswers/${candidateInfo.question_paper_no}`
         );
         const data = await response.json();
-
         // Separate answers and tags
         const answers = {};
         const tagQuestions = [];
@@ -258,7 +275,7 @@ const ExamForm = () => {
         Object.keys(data).forEach((questionId) => {
           // answers[questionId] = Number(data[questionId].answer);
           const answerValue = (data[questionId].answer);
-          // console.log('ansVal',answerValue);
+          console.log('ansVal',answerValue, typeof answerValue);
 
           if (answerValue !== 0 && answerValue != 'NULL') {
             answers[questionId] = answerValue;
@@ -478,41 +495,49 @@ const setValueForDq=(questId)=>{
                     <div key={incrementingId}>
                       <>
                         {/* MUI TextField as a textarea */}
-                        <textarea
-                          className="mt-3 mx-2"
-                          placeholder="Enter your answer here"
-                          rows="4"
-                          value = {answers[incrementingId] || ""}
-                          id = {`question_${incrementingId}`}
-                          name={`question_${incrementingId}`}
-                          onChange={(e) => {
-                            handleOptionChange(incrementingId, e.target.value)
-                            setDqAnswer( e.target.value);
-                          }}
-                          style={{
-                            width: "100%", // Full width
-                            border: "1px solid #ccc",
-                            borderRadius: "4px",
-                            padding: "8px",
-                            color: "black",
-                            fontSize: "16px",
-                          }}
-                        ></textarea>
-
+                        <TextField
+      className="mt-3 mx-2"
+      placeholder="Enter your answer here"
+      multiline
+      rows={4}
+      value={answers[incrementingId] || ""}
+      id={`question_${incrementingId}`}
+      name={`question_${incrementingId}`}
+      onChange={(e) => {
+        handleOptionChange(incrementingId, e.target.value);
+        setDqAnswer(e.target.value);
+        setIsSaveDisabled(false);
+      }}
+      variant="outlined"
+      fullWidth
+      InputProps={{
+        style: {
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+        },
+      }}
+    />
                         <br />
                         {/* MUI Button for form submission */}
                         <input
                           type="button"
-                          className="mx-2"
+                          className="mx-2 btn btn-success"
+                          id = "saveButton"
                           onClick={(e) => {
                             e.preventDefault();
                             handleOptionChange(incrementingId, dqAnswer);
                             setValueForDq(incrementingId)
                             setDqAnswer("");
+                            // handleNextQuestionAndSaveAnswer(isSaveDisabled);
+                            setIsSaveDisabled(true);
                           }}
                           style={{ marginTop: "16px" }}
-                          value="Submit" // Use value for the button text
+                          value="Save Answer" 
+                          disabled={isSaveDisabled} // Disable the button if true
+                          // Use value for the button text
                         />
+
+                        {renderNotSavingAlert == true && isSaveDisabled == false ?(<RenderAlertForNotSaving  sendDataToExamForm={handleDataFromRenderAlert}/>):(<></>)}
                       </>
                     </div>
                   ) : (
@@ -533,12 +558,18 @@ const setValueForDq=(questId)=>{
       );
     }
   };
-
+const handleDataFromRenderAlert=()=>{
+  setRenderNotSavingAlert(false);
+}
   const handleNextQuestion = async () => {
     // console.log('select tag',tagquestions);
+    // alert(questions[currentQuestionIndex].question_type)
+    if(questions[currentQuestionIndex].question_type == 'DQ' && isSaveDisabled == false){
+      // alert("Save answer before going to the next button")
+      setRenderNotSavingAlert(true) ;
+    } 
+    else{
     setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
-
-    console.log(JSON.stringify(answers) + "entered answer ");
     const entries = Object.entries(answers);
     const currentqp = currentQuestionIndex + 1;
     const tagqpindex = currentqp + 1;
@@ -575,9 +606,16 @@ const setValueForDq=(questId)=>{
         2: questions[currentQuestionIndex].id,
       });
     }
+  }
   };
 
   const handleBackQuestion = async () => {
+    if(questions[currentQuestionIndex].question_type == 'DQ' && isSaveDisabled == false){
+      // alert("Save answer before going to the next button")
+      setRenderNotSavingAlert(true) ;
+
+    } 
+    else{
     setCurrentQuestionIndex((prevIndex) => prevIndex - 1);
 
     console.log("Submitted Answers:", answers);
@@ -615,7 +653,7 @@ const setValueForDq=(questId)=>{
 
       // await insertResponse({ 0: currentqp, 1: " " });
     }
-  };
+}};
 
   const handleTagQuestion = () => {
     const currentQP = currentQuestionIndex + 1;
@@ -900,6 +938,8 @@ const setValueForDq=(questId)=>{
                 ExamDate={candidateInfo.exam_date}
                 Calculator={examSettings.calcEnable}
                 RoughtSheet={examSettings.roughtSheetEnable}
+                Questions = {questions}
+                isSaveDisabled = {isSaveDisabled}
               />
             </div>
             <div className="row">
@@ -919,13 +959,18 @@ const setValueForDq=(questId)=>{
                     </button>
 
                     <button
+                    id = "nextQuestion"
                       className={`  ${
                         currentQuestionIndex > questions.length - 2
                           ? "disabled-btn"
                           : "arrow btn-nxt"
                       }`}
-                      onClick={handleNextQuestion}
-                      disabled={currentQuestionIndex > questions.length - 2}
+                      onClick={()=>{
+                        
+                          handleNextQuestion();
+
+                      }}
+                      disabled={currentQuestionIndex > questions.length - 2 }
                     >
                       Next Question
                     </button>
