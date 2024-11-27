@@ -3,11 +3,11 @@ import PropTypes from 'prop-types';
 import './NumberPalette.css'; // Add CSS for styling if needed
 import CalculatorAndRoughSheet from './CalculatorAndRoughSheet'; // Import the CalculatorAndRoughSheet component
 import SciCalculatorAndRoughSheet from './SciCalculatorAndRoughSheet'; // Import the CalculatorAndRoughSheet component
-import RenderAlertForNotSaving from "./RenderAlertForNotSaving"
-const NumberPalette = ({ totalQuestions, currentQuestionIndex, answeredQuestions, onQuestionSelect, taggedQuestions, MembershipNo, QuestionPNo, SubjectCode , ExamDate, Calculator, RoughtSheet,Questions,isSaveDisabled }) => {
+const NumberPalette = ({ totalQuestions, currentQuestionIndex, answeredQuestions, onQuestionSelect, taggedQuestions, MembershipNo, QuestionPNo, SubjectCode , ExamDate, Calculator, RoughtSheet,Questions,isSaveDisabled,sendHandleSwitchControl }) => {
   const handleQuestionSelect = (index) => {
     if(Questions[currentQuestionIndex].question_type == 'DQ' && isSaveDisabled == false){
-      alert("Save answer before changing questions")
+      // alert("Save answer before changing questions")
+      sendHandleSwitchControl();
     }else{
      onQuestionSelect(index);
   }

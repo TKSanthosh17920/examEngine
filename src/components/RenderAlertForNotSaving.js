@@ -1,48 +1,50 @@
-import React,{useState} from 'react'
+import React, { useState } from 'react';
+import { Modal, Box, Typography, Button } from '@mui/material';
 
-const RenderAlertForNotSaving = ({sendDataToExamForm}) => {
-
+const RenderAlertForNotSaving = ({ sendDataToExamForm }) => {
   const [isVisible, setIsVisible] = useState(true);
 
   const handleClick = () => {
     setIsVisible(false);
-    sendDataToExamForm(false)
+    sendDataToExamForm(false);
   };
 
-  if (!isVisible) {
-    return null;
-  }
-
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // transparent background
-        zIndex: 1000, // ensure it's on top
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          textAlign: 'center',
+    <Modal open={isVisible} onClose={() => setIsVisible(false)}>
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          bgcolor: 'rgba(0, 0, 0, 0.5)', // transparent background
+          zIndex: 1000,
         }}
       >
-        <p>Save Answer before switching questions</p>
-        <button onClick={handleClick} style={{ padding: '10px 20px', marginTop: '10px' }}>
-          Okay
-        </button>
-      </div>
-    </div>
+        <Box
+          sx={{
+            bgcolor: 'white',
+            padding: 3,
+            borderRadius: 2,
+            textAlign: 'center',
+            maxWidth: '400px',
+            width: '90%',
+          }}
+        >
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Save Answer before switching questions
+          </Typography>
+          <Button variant="contained" color="primary" onClick={handleClick}>
+            Okay
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
   );
-}
+};
 
-export default RenderAlertForNotSaving
+export default RenderAlertForNotSaving;

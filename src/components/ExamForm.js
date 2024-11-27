@@ -44,6 +44,7 @@ const ExamForm = () => {
   const [currentDqAnswer, setCurrentDqAnswer] = useState("");
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [renderNotSavingAlert,setRenderNotSavingAlert] = useState(false)
+  const [switchingQuestions , setSwitchingQuestions] = useState(false);
 
   const ShowCandidateResponse = async () => {
     // alert(candidateInfo.user);
@@ -92,20 +93,10 @@ const ExamForm = () => {
     setFontSize((prevSize) => Math.max(prevSize - 2, 10)); // Decrease font size by 2px, but not below 10px
   };
 
-  // const handleNextQuestionAndSaveAnswer=()=>{
-  //   let nextQuestionClicked = false;
-  //   const saveAnswerId = document.getElementById("saveAnswer");
-  //   alert(saveAnswerId);
-  //   // nextQuestionId.addEventListener('click',()=>{
-  //   //   alert("hello")
-  //   //   nextQuestionClicked = true;
-  //   // })
-  //   // let saveButton = document.getElementById("saveAnswer");
-  //   if(!saveAnswerId.disabled){
-  //     alert("save and go")
-  //     return false
-  //   }
-  // }
+const handleSwitchControl=()=>{
+  setSwitchingQuestions(true)
+  setRenderNotSavingAlert(true)
+}
   useEffect(() => {
     // Retrieve data from sessionStorage
     const userAuthData = sessionStorage.getItem("candidateInfo");
@@ -537,7 +528,7 @@ const setValueForDq=(questId)=>{
                           // Use value for the button text
                         />
 
-                        {renderNotSavingAlert == true && isSaveDisabled == false ?(<RenderAlertForNotSaving  sendDataToExamForm={handleDataFromRenderAlert}/>):(<></>)}
+                        {(renderNotSavingAlert == true && isSaveDisabled == false) || (renderNotSavingAlert == true && switchingQuestions == true && isSaveDisabled == false) ?(<RenderAlertForNotSaving  sendDataToExamForm={handleDataFromRenderAlert}/>):(<></>)}
                       </>
                     </div>
                   ) : (
@@ -940,6 +931,7 @@ const handleDataFromRenderAlert=()=>{
                 RoughtSheet={examSettings.roughtSheetEnable}
                 Questions = {questions}
                 isSaveDisabled = {isSaveDisabled}
+                sendHandleSwitchControl = {handleSwitchControl}
               />
             </div>
             <div className="row">
