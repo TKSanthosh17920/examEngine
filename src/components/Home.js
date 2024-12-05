@@ -28,7 +28,7 @@ const Main = () => {
   const [mediumSettings, setMediumSettings] = useState({});
   const [subjectLanguages, setSubjectLanguages] = useState([]);
   // const [mediumCode, setMediumCode] = useState("");
-  const [mediumCode, setMediumCode] = React.useState(
+  const [mediumCode, setMediumCode] = useState(
     sessionStorage.getItem('candidate-medium') || 'EN'
   );
   const [arrLang, setArrLang] = useState({});
@@ -36,7 +36,7 @@ const Main = () => {
 
   const medium = sessionStorage.getItem('candidate-medium') || 'EN';
 
-
+ 
   const renderMediumCode = () => {
     if (session.ta_override != "Y") {
       if (mediumSettings.display_medium == "Y") {
@@ -98,6 +98,7 @@ const Main = () => {
       try {
         const response = await fetch(`http://localhost:5000/candidate_details/${user}`);
         const data = await response.json();
+        // console.log(mediumCode);
         const newCandidateInfo = { 
             user: user, 
             candidate_name: data.CandidateName,
@@ -115,7 +116,11 @@ const Main = () => {
             exam_date: data.examDate, 
             question_paper_no: data.questionPaperNo,
             encryptKey: data.encryptKey,
-            pass_mark: data.pass_mark };
+            pass_mark: data.pass_mark,
+            total_marks : data.total_marks,
+            medium : mediumCode
+           };
+           // Store in sessionStorage
         // console.log('new-userrr',newCandidateInfo);
 
         // Clear existing data and set new data
@@ -123,8 +128,12 @@ const Main = () => {
         // console.log('userr',candidateInfo[0]); 
 
         // dispatch(setFormattedDate(candidateInfo[0].exam_date))
+
         // Store in sessionStorage
         sessionStorage.setItem('candidateInfo', JSON.stringify(newCandidateInfo));
+        sessionStorage.setItem('candidate-medium', mediumCode); 
+        console.log("session"+sessionStorage.getItem('candidate-medium'))
+          //  console.log(mediumCode)
       } catch (error) {
         console.error('Error fetching candidate info:', error);
       }

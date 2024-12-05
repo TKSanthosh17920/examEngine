@@ -12,8 +12,9 @@ import BulkTimeExtension from './BulkTimeExtension';
 import GraceTimeExtension from './GraceTimeExtension';
 import ImageDownload from './ImageDownload';
 import DBPatch from './DBPatch';
-
-
+import ScannerUpload from './ScannerUpload';
+import NetbootEnableDisable from './NetbootEnableDisable';
+import SecureBrowserEnableDisable from './SecureBrowserEnableDisable';
 
 const examReports = [
     { id: 1, name: 'Attendance Report' },
@@ -40,8 +41,10 @@ const miscellaneousReports = [
 { id: 4, name: 'Image Download'},
 { id: 5, name: 'DB Patch update'},
 { id: 6, name: 'Bulk Time Extension'},
-// { id: 7, name: 'Scanner Upload'},
+{ id: 7, name: 'Scanner Upload'},
 { id: 8, name: 'Grace Time Extension'}, 
+{ id: 9, name: 'Netboot Enable/Disable'}, 
+{ id: 10, name: 'Secure Browser Enable/Disable'},
 
 ];
 
@@ -138,7 +141,9 @@ const ReportTable = ({ type, onReportSelect }) => {
                 {type == 'miscellaneous' && selectedReport.id == 8 && <GraceTimeExtension />}
                 {type == 'miscellaneous' && selectedReport.id == 4 && <ImageDownload />}
                 {type == 'miscellaneous' && selectedReport.id == 5 && <DBPatch />}
-
+                {type == 'miscellaneous' && selectedReport.id == 7 && <ScannerUpload />}
+                {type == 'miscellaneous' && selectedReport.id == 9 && <NetbootEnableDisable />}
+                {type == 'miscellaneous' && selectedReport.id == 10 && <SecureBrowserEnableDisable />}
           </div>
         </div>
       )}

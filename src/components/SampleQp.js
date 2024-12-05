@@ -86,10 +86,11 @@ const SampleQp = () => {
                         exam_name: parsedData.exam_name,
                         subject_name: parsedData.subject_name,
                         exam_date: parsedData.exam_date,
-                        question_paper_no: parsedData.question_paper_no
+                        question_paper_no: parsedData.question_paper_no,
+                        medium : parsedData.medium
                     });
                 
-
+// console.log(parsedData)
                     // console.log('parsed subject dur', parsedData.subject_duration);
                     const durationInSeconds = parsedData.subject_duration;// Convert minutes to seconds
                     setTimer('600');

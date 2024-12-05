@@ -17,6 +17,7 @@ import InternetSpeedChecker from './components/InternetSpeedChecker'; // Your Ro
 
 import NotFound from './components/NotFound'; 
 import CandidateFeedback from './components/CandidateFeedback'; // Your ExamForm component
+import QPView from "./components/QPView"
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
           <Route path="/activate" element={<InternetSpeedChecker/>} />
           <Route path="*" element={<NotFound />} />  {/* Catch-all route */}
           <Route path="/feedback" element={<CandidateFeedback/>} />
+          <Route path="/qpview" element = {<QPView/>}/>
         </Routes>
         
       </div>

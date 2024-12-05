@@ -130,7 +130,8 @@ function FeedbackForm() {
                     exam_date: parsedData.exam_date,
                     question_paper_no: parsedData.question_paper_no,
                     encryptKey: parsedData.encryptKey,
-                    pass_mark: parsedData.pass_mark
+                    pass_mark: parsedData.pass_mark,
+                    medium : parsedData.medium
                 });
             
 

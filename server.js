@@ -20,6 +20,7 @@ const fetch = require("node-fetch");
 require("dotenv").config(); // For environment variables
 const utils = require("./utils");
 const { arValue, timeValue, biometricValue } = require("./Constants");
+const { re } = require("mathjs");
 
 const app = express();
 const port = 5000;
@@ -749,73 +750,80 @@ app.post("/response", (req, res) => {
       console.error("Transaction error:", err);
       return res.status(500).json({ message: "Internal Server Error" });
     }
-    const getQuestionType=(questionId)=>{
-      const query = "select question_type from iib_sq_details where question_id = ?";
-      return new Promise((resolve,reject)=>{
-        db.query(query,[questionId],(err,res)=>{
+    const getQuestionType = (questionId) => {
+      const query =
+        "select question_type from iib_sq_details where question_id = ?";
+      return new Promise((resolve, reject) => {
+        db.query(query, [questionId], (err, res) => {
           if (err) {
             console.error("Error querying the database:", err);
             res.status(500).json({ error: "Internal Server Error" });
             return reject();
           }
-          console.log(res[0].question_type)
-          return resolve(res[0].question_type)
-        })
-      })
-}
-const quesType = await getQuestionType(questionId);
+          console.log(res[0].question_type);
+          return resolve(res[0].question_type);
+        });
+      });
+    };
+    const quesType = await getQuestionType(questionId);
     // Format the insert query
     const insertResponseSql =
       "INSERT INTO iib_response (question_paper_no, question_id, answer, display_order, tag, host_ip, updatedtime, clienttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-      let formattedInsertResponseSql
-      if(quesType != 'DQ'){
-    formattedInsertResponseSql = db.format(insertResponseSql, [
-      qpno,
-      questionId,
-      answer,
-      displayorder,
-      tag,
-      hostip,
-      updatedtime,
-      clienttime,
-    ]);
-  }else if (quesType == 'DQ'){
-    formattedInsertResponseSql = db.format(insertResponseSql, [
-      qpno,
-      questionId,
-      'DQ',
-      displayorder,
-      tag,
-      hostip,
-      updatedtime,
-      clienttime,
-    ]);
-  }
-  const insertIntoDqTable = (lastInsertedId,questionId,qpno,answer)=>{
-    const query = "insert into descriptive_answer(response_id,question_id,question_paper_no,desc_ans) values (?,?,?,?)"
-    return new Promise((resolve,reject)=>{
-    db.query(query,[lastInsertedId,questionId,qpno,answer],(err,res)=>{
-      if(err){
-        return reject(db.rollback(() => {
-          console.error("MySQL insert error:", err);
-          res.status(500).json({ message: "Internal Server Error" });
-        }));
-      }
-      return resolve();
-    })
-    })
-  }
+    let formattedInsertResponseSql;
+    if (quesType != "DQ") {
+      formattedInsertResponseSql = db.format(insertResponseSql, [
+        qpno,
+        questionId,
+        answer,
+        displayorder,
+        tag,
+        hostip,
+        updatedtime,
+        clienttime,
+      ]);
+    } else if (quesType == "DQ") {
+      formattedInsertResponseSql = db.format(insertResponseSql, [
+        qpno,
+        questionId,
+        "DQ",
+        displayorder,
+        tag,
+        hostip,
+        updatedtime,
+        clienttime,
+      ]);
+    }
+    const insertIntoDqTable = (lastInsertedId, questionId, qpno, answer) => {
+      const query =
+        "insert into descriptive_answer(response_id,question_id,question_paper_no,desc_ans) values (?,?,?,?)";
+      return new Promise((resolve, reject) => {
+        db.query(
+          query,
+          [lastInsertedId, questionId, qpno, answer],
+          (err, res) => {
+            if (err) {
+              return reject(
+                db.rollback(() => {
+                  console.error("MySQL insert error:", err);
+                  res.status(500).json({ message: "Internal Server Error" });
+                })
+              );
+            }
+            return resolve();
+          }
+        );
+      });
+    };
     db.query(formattedInsertResponseSql, async (err, result) => {
       if (err) {
         return db.rollback(() => {
           console.error("MySQL insert error:", err);
           res.status(500).json({ message: "Internal Server Error" });
         });
-        
       }
       const lastInsertedId = result.insertId;
-      await insertIntoDqTable(lastInsertedId,questionId,qpno,answer)
-      
+      await insertIntoDqTable(lastInsertedId, questionId, qpno, answer);
+
       // Insert the exact formatted query into xml_feed
       insertIntoXmlFeed(formattedInsertResponseSql, (err) => {
         if (err) {
@@ -1074,15 +1082,15 @@ app.get("/question-counts/:subjectCode", (req, res) => {
 
 //   const sql = `
 //       SELECT a.*, b.question_id as question_id,
-//         AES_DECRYPT(b.question_text, ?) as question_text, 
-//         AES_DECRYPT(b.option_1, ?) as option_1, 
-//         AES_DECRYPT(b.option_2, ?) as option_2, 
-//         AES_DECRYPT(b.option_3, ?) as option_3, 
-//         AES_DECRYPT(b.option_4, ?) as option_4, 
-//         AES_DECRYPT(b.option_5, ?) as option_5, 
+//         AES_DECRYPT(b.question_text, ?) as question_text,
+//         AES_DECRYPT(b.option_1, ?) as option_1,
+//         AES_DECRYPT(b.option_2, ?) as option_2,
+//         AES_DECRYPT(b.option_3, ?) as option_3,
+//         AES_DECRYPT(b.option_4, ?) as option_4,
+//         AES_DECRYPT(b.option_5, ?) as option_5,
 //         b.correct_answer, b.marks, b.negative_marks, c.*
 //       FROM iib_question_paper_details AS a
-//       JOIN iib_sq_details AS b ON a.subject_code = b.subject_code 
+//       JOIN iib_sq_details AS b ON a.subject_code = b.subject_code
 //       JOIN iib_subject_sections AS c ON b.section_code = c.section_code AND a.question_id = b.question_id
 //       WHERE a.question_paper_no = ? group by b.question_id ORDER BY display_order`;
 
@@ -1133,6 +1141,7 @@ app.get("/questions/:questionPaperNo/:encryptKey/:lang", (req, res) => {
   const questionPaperNo = req.params.questionPaperNo;
   const encryptKey = req.params.encryptKey;
   const lang = req.params.lang;
+
   // const lang = "TN";
   if (!questionPaperNo) {
     return res.status(400).json({ error: "Invalid questionPaperNo parameter" });
@@ -1140,11 +1149,11 @@ app.get("/questions/:questionPaperNo/:encryptKey/:lang", (req, res) => {
   // const lang = sessionStorage.getItem('candidate-medium');
 
   console.log(lang);
-  console.log(lang);
-// Determine which table and condition to use based on language
-let sql;
-if (lang == "EN") {
-  sql = `
+
+  // Determine which table and condition to use based on language
+  let sql;
+  if (lang == "EN") {
+    sql = `
     SELECT 
       a.*, 
       b.question_id AS question_id,
@@ -1171,8 +1180,8 @@ if (lang == "EN") {
     GROUP BY b.question_id 
     ORDER BY display_order
   `;
-} else {
-  sql = `
+  } else {
+    sql = `
     SELECT 
       a.*, 
       b.question_id AS question_id,
@@ -1198,112 +1207,124 @@ if (lang == "EN") {
     GROUP BY b.question_id 
     ORDER BY display_order
   `;
-}
+  }
 
-// Now you have your sql query depending on the value of `lang`
+  // Now you have your sql query depending on the value of `lang`
 
+  const queryParams = [
+    encryptKey, // For AES_DECRYPT (question_text)
+    encryptKey, // For AES_DECRYPT (option_1)
+    encryptKey, // For AES_DECRYPT (option_2)
+    encryptKey, // For AES_DECRYPT (option_3)
+    encryptKey, // For AES_DECRYPT (option_4)
+    encryptKey, // For AES_DECRYPT (option_5)
+    questionPaperNo, // For a.question_paper_no
+  ];
+  if (lang !== "EN") {
+    queryParams.push(lang);
+  }
+  const getCaseQuestionText = (case_id, subject_code, section_code, lang) => {
+    if (case_id > 0 && case_id != null) {
+      try {
+        console.log(typeof case_id, case_id, subject_code, section_code);
+        let getCaseText;
+        if (lang == "EN") {
+          getCaseText =
+            "select AES_DECRYPT(case_text,?) as case_text from iib_sc_details where case_id = ? and subject_code = ? and section_code = ?";
+        } else {
+          getCaseText =
+            "select AES_DECRYPT(case_text,?) as case_text from iib_sc_unicode_details where case_id = ? and subject_code = ? and section_code = ? and lang_code = ?";
+        }
 
-const queryParams = [
-  encryptKey, // For AES_DECRYPT (question_text)
-  encryptKey, // For AES_DECRYPT (option_1)
-  encryptKey, // For AES_DECRYPT (option_2)
-  encryptKey, // For AES_DECRYPT (option_3)
-  encryptKey, // For AES_DECRYPT (option_4)
-  encryptKey, // For AES_DECRYPT (option_5)
-  questionPaperNo, // For a.question_paper_no
-];
-if (lang !== "EN") {
-  queryParams.push(lang);
-}
-const getCaseQuestionText =  (case_id, subject_code,section_code,lang)=>{
-  
-  if(case_id > 0 && case_id != null){
-  try{
-    console.log(typeof(case_id),case_id, subject_code,section_code)
-    let getCaseText;
-    if(lang == 'EN'){
-       getCaseText = "select AES_DECRYPT(case_text,?) as case_text from iib_sc_details where case_id = ? and subject_code = ? and section_code = ?";
-    }else{
-      getCaseText = "select AES_DECRYPT(case_text,?) as case_text from iib_sc_unicode_details where case_id = ? and subject_code = ? and section_code = ? and lang_code = ?";
-    }
-  
-  return new Promise((resolve,reject)=>{
-    db.query(getCaseText,[encryptKey,case_id,subject_code,section_code,lang],(err,result)=>{
-      if(err){
-        console.error("MySQL error:", err);
-        return reject(res.status(500).json({ error: "Internal Server Error" }));
-      }else{
-        console.log(result[0].case_text.toString())
-        return resolve(result[0].case_text.toString())
+        return new Promise((resolve, reject) => {
+          db.query(
+            getCaseText,
+            [encryptKey, case_id, subject_code, section_code, lang],
+            (err, result) => {
+              if (err) {
+                console.error("MySQL error:", err);
+                return reject(
+                  res.status(500).json({ error: "Internal Server Error" })
+                );
+              } else {
+                console.log(result[0].case_text.toString());
+                return resolve(result[0].case_text.toString());
+              }
+            }
+          );
+        });
+      } catch (err) {
+        console.error(err);
       }
-    })
-  })
-}catch(err){
-  console.error(err)
-}
-}else{
-  return '';
-}
-}
-// const gatherCaseQuestion= async (case_id, subject_code,section_code)=>{
-//     return await getCaseQuestionText(case_id, subject_code,section_code)
-// }
-  db.query(sql,queryParams,async (err, result) => {
-      if (err) {
-        console.error("MySQL error:", err);
-        return res.status(500).json({ error: "Internal Server Error" });
-      } else {
-        // const resultdata = result.map( (question, index) => ({
-        //   id: question.question_id,
-        //   // id: index + 1,
-        //   text: decode(question.question_text),
-        //   subject_code: question.subject_code,
-        //   section_name: question.section_name,
-        //   answer_order: question.answer_order,
-        //   case_id:question.case_id,
-        //   case_text: gatherCaseQuestion(question.case_id,question.subject_code,question.section_code),
-        //   options: [
-        //     { id: "a", text: decode(question.option_1) },
-        //     { id: "b", text: decode(question.option_2) },
-        //     { id: "c", text: decode(question.option_3) },
-        //     { id: "d", text: decode(question.option_4) },
-        //     { id: "e", text: decode(question.option_5) },
-
-        //   ],
-        //   correct_ans: Number(question.correct_answer),
-        //   // correct_ans: 2,
-
-        //   mark: question.marks,
-        //   negative_mark: question.negative_marks,
-        // }));
-        const resultdata = await Promise.all(
-          result.map(async (question) => ({
-            id: question.question_id,
-            text: decode(question.question_text),
-            subject_code: question.subject_code,
-            section_name: question.section_name,
-            answer_order: question.answer_order,
-            case_id: question.case_id,
-            case_text: decode(await getCaseQuestionText(question.case_id, question.subject_code, question.section_code,lang)),
-            options: [
-              { id: "a", text: decode(question.option_1) },
-              { id: "b", text: decode(question.option_2) },
-              { id: "c", text: decode(question.option_3) },
-              { id: "d", text: decode(question.option_4) },
-              { id: "e", text: decode(question.option_5) },
-            ],
-            correct_ans: Number(question.correct_answer),
-            mark: question.marks,
-            negative_mark: question.negative_marks,
-            question_type : question.question_type,
-          }))
-        );
-        
-        //   console.log(resultdata);
-        res.json(resultdata);
-      }
+    } else {
+      return "";
     }
-  );
+  };
+  // const gatherCaseQuestion= async (case_id, subject_code,section_code)=>{
+  //     return await getCaseQuestionText(case_id, subject_code,section_code)
+  // }
+  db.query(sql, queryParams, async (err, result) => {
+    if (err) {
+      console.error("MySQL error:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      // const resultdata = result.map( (question, index) => ({
+      //   id: question.question_id,
+      //   // id: index + 1,
+      //   text: decode(question.question_text),
+      //   subject_code: question.subject_code,
+      //   section_name: question.section_name,
+      //   answer_order: question.answer_order,
+      //   case_id:question.case_id,
+      //   case_text: gatherCaseQuestion(question.case_id,question.subject_code,question.section_code),
+      //   options: [
+      //     { id: "a", text: decode(question.option_1) },
+      //     { id: "b", text: decode(question.option_2) },
+      //     { id: "c", text: decode(question.option_3) },
+      //     { id: "d", text: decode(question.option_4) },
+      //     { id: "e", text: decode(question.option_5) },
+
+      //   ],
+      //   correct_ans: Number(question.correct_answer),
+      //   // correct_ans: 2,
+
+      //   mark: question.marks,
+      //   negative_mark: question.negative_marks,
+      // }));
+      const resultdata = await Promise.all(
+        result.map(async (question) => ({
+          id: question.question_id,
+          text: decode(question.question_text),
+          subject_code: question.subject_code,
+          section_name: question.section_name,
+          answer_order: question.answer_order,
+          case_id: question.case_id,
+          case_text: decode(
+            await getCaseQuestionText(
+              question.case_id,
+              question.subject_code,
+              question.section_code,
+              lang
+            )
+          ),
+          options: [
+            { id: "a", text: decode(question.option_1) },
+            { id: "b", text: decode(question.option_2) },
+            { id: "c", text: decode(question.option_3) },
+            { id: "d", text: decode(question.option_4) },
+            { id: "e", text: decode(question.option_5) },
+          ],
+          correct_ans: Number(question.correct_answer),
+          mark: question.marks,
+          negative_mark: question.negative_marks,
+          question_type: question.question_type,
+        }))
+      );
+
+      //   console.log(resultdata);
+      res.json(resultdata);
+    }
+  });
 });
 
 app.get("/fetch-photo/:membershipno", (req, res) => {
@@ -1347,32 +1368,33 @@ app.get("/initialAnswers/:questionPaperNo", async (req, res) => {
   if (!questionPaperNo) {
     return res.status(400).json({ error: "Invalid questionPaperNo parameter" });
   }
-  const getCorrectAns = async (answer,quesId,qpno)=>{
-      console.log(answer + typeof answer)
-     if(answer == 'DQ'){
-      console.log("hi naan dq la irunthu pesure")
-      const query = "select desc_ans from descriptive_answer where question_id = ? and question_paper_no = ? and response_id = (select max(response_id) from descriptive_answer where question_id = ? and question_paper_no = ?)"
-      return new Promise((resolve,reject)=>{
-        db.query(query,[quesId,qpno,quesId,qpno],(err,res)=>{
+  const getCorrectAns = async (answer, quesId, qpno) => {
+    console.log(answer + typeof answer);
+    if (answer == "DQ") {
+      const query =
+        "select desc_ans from descriptive_answer where question_id = ? and question_paper_no = ? and response_id = (select max(response_id) from descriptive_answer where question_id = ? and question_paper_no = ?)";
+      return new Promise((resolve, reject) => {
+        db.query(query, [quesId, qpno, quesId, qpno], (err, res) => {
           if (err) {
             console.error("MySQL query error:", err);
-            return reject(res.status(500).json({ message: "Internal Server Error" }));
+            return reject(
+              res.status(500).json({ message: "Internal Server Error" })
+            );
           }
-          console.log(res[0].desc_ans)
-          return resolve(res[0].desc_ans)
-        })
-      })
-      
+          console.log(res[0].desc_ans);
+          return resolve(res[0].desc_ans);
+        });
+      });
     }
-    if(answer != 'DQ' ){
-      if(answer != 'NULL'){
+    if (answer != "DQ") {
+      if (answer != "NULL") {
         return parseInt(answer, 10);
-      }else{
-        console.log(answer +"frok else condition")
-        return answer
+      } else {
+        console.log(answer + "frok else condition");
+        return answer;
       }
-  }
-  }
+    }
+  };
 
   const sql = `SELECT display_order, answer, tag, question_id, question_paper_no FROM iib_response AS r1 WHERE r1.answer IS NOT NULL  AND r1.question_paper_no = ? AND  r1.id = ( SELECT MAX(r2.id) FROM iib_response AS r2 WHERE r2.question_id = r1.question_id  AND r2.question_paper_no = ?)`;
 
@@ -1385,12 +1407,16 @@ app.get("/initialAnswers/:questionPaperNo", async (req, res) => {
     const formattedAnswers = await results.reduce(async (accPromise, curr) => {
       const acc = await accPromise; // Wait for the accumulator to resolve
       acc[curr.display_order] = {
-        answer: await getCorrectAns(curr.answer, curr.question_id, curr.question_paper_no),
+        answer: await getCorrectAns(
+          curr.answer,
+          curr.question_id,
+          curr.question_paper_no
+        ),
         tag: curr.tag,
       };
       return acc;
     }, Promise.resolve({}));
-    
+
     // console.log("formattedAnswers"+formattedAnswers);
     res.json(formattedAnswers);
   });
@@ -1458,6 +1484,7 @@ app.get("/candidate_details/:user", (req, res) => {
       const questionPaperNo = result[0] ? result[0].question_paper_no : null;
       const encryptKey = result[0] ? result[0].qp_encry_key : null;
       const pass_mark = result[0] ? result[0].pass_mark : null;
+      const total_marks = result[0] ? result[0].total_marks : null;
       res.json({
         userId,
         CandidateName,
@@ -1476,6 +1503,7 @@ app.get("/candidate_details/:user", (req, res) => {
         questionPaperNo,
         encryptKey,
         pass_mark,
+        total_marks,
       });
     }
   });
@@ -1801,7 +1829,6 @@ function queryAsync(sql, params) {
       resolve(results); // Return results directly instead of wrapping in an array
     });
   });
-
 }
 app.get(
   "/handleBatchClosure/:batchId/:hostIp/:serialNumber/:centreCode",
@@ -5437,67 +5464,88 @@ app.get("/db-patch/", async (req, res) => {
 });
 
 /*sethu*/
-app.post('/submitFeedback', (req, res) => {
-  const { loginProcess, systemWork, techProblem, questionRating, adequateTime, screenNavigationIssue, examMethodologyRating,examCode,subjectCode,membershipNo,questionpaperno} = req.body;
-  const txtfeedback= problem_questions= '';
-  let msg = '';
-console.log(req.body.examCode);
+app.post("/submitFeedback", (req, res) => {
+  const {
+    loginProcess,
+    systemWork,
+    techProblem,
+    questionRating,
+    adequateTime,
+    screenNavigationIssue,
+    examMethodologyRating,
+    examCode,
+    subjectCode,
+    membershipNo,
+    questionpaperno,
+  } = req.body;
+  const txtfeedback = (problem_questions = "");
+  let msg = "";
+  console.log(req.body.examCode);
 
-  const feedback_enable_query = "SELECT variable_value FROM exam_settings WHERE variable_name='feedback_enable'";
+  const feedback_enable_query =
+    "SELECT variable_value FROM exam_settings WHERE variable_name='feedback_enable'";
   db.query(feedback_enable_query, (err, feedbackrslt) => {
-      if (err) {
-          errorlog('err95', `QUERY: ${feedback_enable_query} ${err}`);
-          return res.status(500).send('Database error');
-      }
+    if (err) {
+      errorlog("err95", `QUERY: ${feedback_enable_query} ${err}`);
+      return res.status(500).send("Database error");
+    }
 
-      if (examMethodologyRating) {
-          const sqlSelect = `SELECT COUNT(1) FROM iib_feedback WHERE membership_no='${membershipNo}' AND exam_code='${examCode}' AND subject_code='${subjectCode}'`;
-          db.query(sqlSelect, (err, result) => {
-              if (err) {
-                  errorlog('err05', `QUERY: ${sqlSelect} ${err}`);
-                  return res.status(500).send('Database error');
-              }
+    if (examMethodologyRating) {
+      const sqlSelect = `SELECT COUNT(1) FROM iib_feedback WHERE membership_no='${membershipNo}' AND exam_code='${examCode}' AND subject_code='${subjectCode}'`;
+      db.query(sqlSelect, (err, result) => {
+        if (err) {
+          errorlog("err05", `QUERY: ${sqlSelect} ${err}`);
+          return res.status(500).send("Database error");
+        }
 
-              const nRows = result[0]['COUNT(1)'];
+        const nRows = result[0]["COUNT(1)"];
 
-              let display_questions = question_asked_twice = answer_not_relevant = question_not_display = answer_not_display = display_image_issue = Display_issue_notdisprop = Junk_Char_observed='';
+        let display_questions =
+          (question_asked_twice =
+          answer_not_relevant =
+          question_not_display =
+          answer_not_display =
+          display_image_issue =
+          Display_issue_notdisprop =
+          Junk_Char_observed =
+            "");
 
-              if (nRows == 0) {
-                  const sqlInsert = `
+        if (nRows == 0) {
+          const sqlInsert = `
                       INSERT INTO iib_feedback (membership_no, exam_code, subject_code, login_process, system_work, tech_prob, q_rating, adeq_time, navigate_issue, rating, feedback_text, diplay_questions, problem_questions, question_asked_twice, answer_not_relevant, question_not_display, answer_not_display, display_image_issue, Display_issue_notdisprop, Junk_Char_observed) 
                       VALUES ('${membershipNo}', '${examCode}', '${subjectCode}', '${loginProcess}', '${systemWork}', '${techProblem}', '${questionRating}', '${adequateTime}', '${screenNavigationIssue}', '${examMethodologyRating}', '${txtfeedback}', '${display_questions}', '${problem_questions}', '${question_asked_twice}', '${answer_not_relevant}', '${question_not_display}', '${answer_not_display}', '${display_image_issue}', '${Display_issue_notdisprop}', '${Junk_Char_observed}')`;
 
-                  db.query(sqlInsert, (err) => {
-                      if (err) {
-                          errorlog('err08', `QUERY: ${sqlInsert} ${err}`);
-                          return res.status(500).send('Database error');
-                      }
-                      msg = "Thank you for your feedback.";
-                      const feed = `INSERT INTO xml_feed(query) VALUES("${sqlInsert}")`;
-                      db.query(feed);
-                      res.send(msg);
-                  });
-              } else {
-                  const sqlUpdate = `
+          db.query(sqlInsert, (err) => {
+            if (err) {
+              errorlog("err08", `QUERY: ${sqlInsert} ${err}`);
+              return res.status(500).send("Database error");
+            }
+            msg = "Thank you for your feedback.";
+            const feed = `INSERT INTO xml_feed(query) VALUES("${sqlInsert}")`;
+            db.query(feed);
+            res.send(msg);
+          });
+        } else {
+          const sqlUpdate = `
                       UPDATE iib_feedback SET 
                       login_process='${loginProcess}', system_work='${systemWork}', tech_prob='${techProblem}', q_rating='${questionRating}', adeq_time='${adequateTime}', navigate_issue='${screenNavigationIssue}', rating='${examMethodologyRating}', feedback_text='${txtfeedback}', diplay_questions='${display_questions}', problem_questions='${problem_questions}', question_asked_twice='${question_asked_twice}', answer_not_relevant='${answer_not_relevant}', question_not_display='${question_not_display}', answer_not_display='${answer_not_display}', display_image_issue='${display_image_issue}', Display_issue_notdisprop='${Display_issue_notdisprop}', Junk_Char_observed='${Junk_Char_observed}' 
                       WHERE membership_no='${membershipNo}' AND exam_code='${examCode}' AND subject_code='${subjectCode}'`;
 
-                      // console.log(sqlUpdate);
+          // console.log(sqlUpdate);
 
-                  db.query(sqlUpdate, (err) => {
-                      if (err) {
-                          errorlog('err06', `QUERY: ${sqlUpdate} ${err}`);
-                          return res.status(500).send('Database error');
-                      }
-                      msg = "Thank you for your feedback.";
-                      const feed = `INSERT INTO xml_feed(query) VALUES("${sqlUpdate}")`;
-                      db.query(feed);
-                      res.send(msg);
-                  });
-              }
+          db.query(sqlUpdate, (err) => {
+            if (err) {
+              errorlog("err06", `QUERY: ${sqlUpdate} ${err}`);
+              return res.status(500).send("Database error");
+            }
+            msg = "Thank you for your feedback.";
+            const feed = `INSERT INTO xml_feed(query) VALUES("${sqlUpdate}")`;
+            db.query(feed);
+            res.send(msg);
           });
-      }
+        }
+      });
+    }
   });
 });
 
@@ -5510,9 +5558,8 @@ app.get("/candidate-score-responses/:rollNum", async (req, res) => {
     SELECT DISTINCT e.exam_code, e.exam_name 
     FROM iib_exam e, iib_candidate_scores s 
     WHERE s.exam_code = e.exam_code AND online = 'Y' AND membership_no = ?`;
-  const rowsExam = await queryAsync(examCodeQuery, [rollNum]);
+    const rowsExam = await queryAsync(examCodeQuery, [rollNum]);
 
-  
     // Iterate through each exam
     for (const rowExam of rowsExam) {
       const { exam_code: examCode, exam_name: examName } = rowExam;
@@ -5525,10 +5572,14 @@ app.get("/candidate-score-responses/:rollNum", async (req, res) => {
           AND online = 'Y' 
           AND e.exam_code = ? 
           AND membership_no = ?`;
-      const rowsSubject = await queryAsync(subjectCodeQuery, [examCode, rollNum]);
+      const rowsSubject = await queryAsync(subjectCodeQuery, [
+        examCode,
+        rollNum,
+      ]);
 
       for (const rowSubject of rowsSubject) {
-        const { subject_code: subjectCode, subject_name: subjectName } = rowSubject;
+        const { subject_code: subjectCode, subject_name: subjectName } =
+          rowSubject;
 
         // Get the candidate's question paper number
         const sqlQuestions = `
@@ -5538,19 +5589,26 @@ app.get("/candidate-score-responses/:rollNum", async (req, res) => {
             AND subject_code = ? 
             AND test_status = 'C' 
             AND membership_no = ?`;
-        const rowsSelQues = await queryAsync(sqlQuestions, [examCode, subjectCode, rollNum]);
+        const rowsSelQues = await queryAsync(sqlQuestions, [
+          examCode,
+          subjectCode,
+          rollNum,
+        ]);
 
         for (const rowSelQues of rowsSelQues) {
           const questionPaperNo = rowSelQues.question_paper_no;
-         // Get exam marks and other details
+          // Get exam marks and other details
           const sqlMarks = `
             SELECT total_marks, pass_mark, display_response 
             FROM iib_exam_subjects 
             WHERE exam_code = ? 
               AND subject_code = ? 
               AND online = 'Y'`;
-          const rowsSqlMarks = await queryAsync(sqlMarks, [examCode, subjectCode]);
-          const displayResponse = rowsSqlMarks[0]['display_response'];
+          const rowsSqlMarks = await queryAsync(sqlMarks, [
+            examCode,
+            subjectCode,
+          ]);
+          const displayResponse = rowsSqlMarks[0]["display_response"];
 
           // console.log('display_response',display_response);
 
@@ -5560,12 +5618,12 @@ app.get("/candidate-score-responses/:rollNum", async (req, res) => {
           FROM iib_question_paper_details 
           WHERE question_paper_no = ? 
           ORDER BY display_order`;
-        const rowsSqlQnsIds = await queryAsync(sqlQnsIds, [questionPaperNo]);
-        const quesIdsArr = rowsSqlQnsIds.map(row => row.question_id);
-        // console.log('Question_id',quesIdsArr);
-//         // const quesIdsArrdis = rowsSqlQnsIds.map(row => row.display_order);
-// Step 1: Fetch all response data for `questionPaperNo` from `iib_response`
-const sqlQns = `
+          const rowsSqlQnsIds = await queryAsync(sqlQnsIds, [questionPaperNo]);
+          const quesIdsArr = rowsSqlQnsIds.map((row) => row.question_id);
+          // console.log('Question_id',quesIdsArr);
+          //         // const quesIdsArrdis = rowsSqlQnsIds.map(row => row.display_order);
+          // Step 1: Fetch all response data for `questionPaperNo` from `iib_response`
+          const sqlQns = `
   SELECT question_id, answer, display_order 
   FROM iib_response 
   WHERE id IN (
@@ -5576,43 +5634,47 @@ const sqlQns = `
   ) 
   ORDER BY display_order
 `;
-const rowsSqlQns = await queryAsync(sqlQns, [questionPaperNo]);
-// console.log("Response data:", rowsSqlQns);
+          const rowsSqlQns = await queryAsync(sqlQns, [questionPaperNo]);
+          // console.log("Response data:", rowsSqlQns);
 
-// Step 2: Fetch correct answers for all questions in `quesIdsArr`
-const aQuestionsSql = `
+          // Step 2: Fetch correct answers for all questions in `quesIdsArr`
+          const aQuestionsSql = `
   SELECT question_id, correct_answer 
   FROM iib_sq_details 
   WHERE question_id IN (${quesIdsArr.join(",")})
 `;
-const rowsSqlQnsIdsVal = await queryAsync(aQuestionsSql);
-// console.log("Correct answers:", rowsSqlQnsIdsVal);
+          const rowsSqlQnsIdsVal = await queryAsync(aQuestionsSql);
+          // console.log("Correct answers:", rowsSqlQnsIdsVal);
 
-// Step 3: Merge both datasets based on `question_id`, ensuring every question has a `correct_answer`
-const CandidateResponse = quesIdsArr.map(question_id => {
-  const response = rowsSqlQns.find(item => item.question_id === question_id);
-  const correctAnswer = rowsSqlQnsIdsVal.find(
-    item => item.question_id === question_id
-  );
+          // Step 3: Merge both datasets based on `question_id`, ensuring every question has a `correct_answer`
+          const CandidateResponse = quesIdsArr.map((question_id) => {
+            const response = rowsSqlQns.find(
+              (item) => item.question_id === question_id
+            );
+            const correctAnswer = rowsSqlQnsIdsVal.find(
+              (item) => item.question_id === question_id
+            );
 
-  return {
-    question_id,
-    answer: response ? response.answer : '-',
-    display_order: response ? response.display_order : '-',
-    correct_answer: correctAnswer ? correctAnswer.correct_answer : '-'
-  };
-});
+            return {
+              question_id,
+              answer: response ? response.answer : "-",
+              display_order: response ? response.display_order : "-",
+              correct_answer: correctAnswer
+                ? correctAnswer.correct_answer
+                : "-",
+            };
+          });
 
-// console.log("Merged Data with All Correct Answers:", CandidateResponse);
-const Questioncount=rowsSqlQnsIdsVal.length;
-const attendedQusCount=rowsSqlQns.length;
-console.log(Questioncount);
-res.json({
-  Questioncount,
-  attendedQusCount,
-  CandidateResponse,
-  displayResponse
-})
+          // console.log("Merged Data with All Correct Answers:", CandidateResponse);
+          const Questioncount = rowsSqlQnsIdsVal.length;
+          const attendedQusCount = rowsSqlQns.length;
+          console.log(Questioncount);
+          res.json({
+            Questioncount,
+            attendedQusCount,
+            CandidateResponse,
+            displayResponse,
+          });
         }
       }
     }
@@ -5622,20 +5684,19 @@ res.json({
   }
 });
 
-
-app.post('/exam-closure-summary', (req, res) => {
+app.post("/exam-closure-summary", (req, res) => {
   const data = req.body;
 
   // Extract and validate necessary variables
   const {
-    ExamName = '', 
-    ExamDate = '', 
-    CentreCode = '', 
-    ServerNo = '', 
-    AdminId = '172.17.109.2',
-    SerialNumber = '',
-    feedback, 
-    attachFile, 
+    ExamName = "",
+    ExamDate = "",
+    CentreCode = "",
+    ServerNo = "",
+    AdminId = "172.17.109.2",
+    SerialNumber = "",
+    feedback,
+    attachFile,
     ...formFields
   } = data;
 
@@ -5648,58 +5709,77 @@ app.post('/exam-closure-summary', (req, res) => {
 
   // Prepare values from the form data
   const values = [
-    ExamName, ExamDate, CentreCode, ServerNo,
-    formFields.candidateBatch1Scheduled, formFields.candidateBatch2Scheduled, formFields.candidateBatch3Scheduled,
-    formFields.candidateBatch1Attended, formFields.candidateBatch2Attended, formFields.candidateBatch3Attended,
-    formFields.labsUsed, formFields.testAdministrators,
-    formFields.candidatesWithoutAdmitCard, formFields.candidatesWithoutIdentityProof, formFields.candidatesWithoutAdmitCardAndIdentityProof,
-    formFields.candidatesReportingLate, formFields.candidatesRequestingCentreChange, formFields.candidatesIndulgingInMalpractice,
-    AdminId, currentTimestamp, SerialNumber, 'S'
+    ExamName,
+    ExamDate,
+    CentreCode,
+    ServerNo,
+    formFields.candidateBatch1Scheduled,
+    formFields.candidateBatch2Scheduled,
+    formFields.candidateBatch3Scheduled,
+    formFields.candidateBatch1Attended,
+    formFields.candidateBatch2Attended,
+    formFields.candidateBatch3Attended,
+    formFields.labsUsed,
+    formFields.testAdministrators,
+    formFields.candidatesWithoutAdmitCard,
+    formFields.candidatesWithoutIdentityProof,
+    formFields.candidatesWithoutAdmitCardAndIdentityProof,
+    formFields.candidatesReportingLate,
+    formFields.candidatesRequestingCentreChange,
+    formFields.candidatesIndulgingInMalpractice,
+    AdminId,
+    currentTimestamp,
+    SerialNumber,
+    "S",
   ];
 
   // Log for debugging
-  console.log('Inserting data:', values);
+  console.log("Inserting data:", values);
 
   // Execute query
   db.query(insertQuery, values, (err, result) => {
     if (err) {
-      console.error('Error inserting data:', err);
-      return res.status(500).json({ message: 'Error inserting data', error: err });
+      console.error("Error inserting data:", err);
+      return res
+        .status(500)
+        .json({ message: "Error inserting data", error: err });
     }
-    res.json({ message: 'Data inserted successfully' });
+    res.json({ message: "Data inserted successfully" });
   });
 });
 
-
-app.get('/get-exam-date', (req, res) => {
-  const sqlDate = "SELECT DISTINCT exam_date FROM iib_exam_schedule ORDER BY exam_date";
+app.get("/get-exam-date", (req, res) => {
+  const sqlDate =
+    "SELECT DISTINCT exam_date FROM iib_exam_schedule ORDER BY exam_date";
   db.query(sqlDate, (error, results) => {
-      if (error) {
-          return callback(error, null);
-      }
+    if (error) {
+      return callback(error, null);
+    }
 
-      if (results.length === 1) {
-          const eDateRaw = results[0].exam_date;
-          const eDate = eDateRaw instanceof Date ? eDateRaw.toISOString().split("T")[0] : eDateRaw; // Ensure it's in YYYY-MM-DD format
+    if (results.length === 1) {
+      const eDateRaw = results[0].exam_date;
+      const eDate =
+        eDateRaw instanceof Date
+          ? eDateRaw.toISOString().split("T")[0]
+          : eDateRaw; // Ensure it's in YYYY-MM-DD format
 
-          if (typeof eDate === "string" && eDate.includes("-")) {
-              const [year, month, day] = eDate.split("-");
-              const dispDate = `${day}-${month}-${year}`;
-              res.status(200).json({ exam_date: eDate, display_date: dispDate });
-          } else {
-            res.status(400).json(new Error("Invalid date format"));
-          }
+      if (typeof eDate === "string" && eDate.includes("-")) {
+        const [year, month, day] = eDate.split("-");
+        const dispDate = `${day}-${month}-${year}`;
+        res.status(200).json({ exam_date: eDate, display_date: dispDate });
       } else {
-          const today = new Date();
-          const exam_date = today.toISOString().split("T")[0]; // Format as YYYY-MM-DD
-          // callback(null, { exam_date });
-          res.status(200).json({ exam_date: exam_date});
+        res.status(400).json(new Error("Invalid date format"));
       }
+    } else {
+      const today = new Date();
+      const exam_date = today.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+      // callback(null, { exam_date });
+      res.status(200).json({ exam_date: exam_date });
+    }
   });
 });
 
-
-app.get('/get-center-server-details', async (req, res) => {
+app.get("/get-center-server-details", async (req, res) => {
   const selAutoFeed = "SELECT center_code, serverno FROM autofeed";
 
   try {
@@ -5714,7 +5794,9 @@ app.get('/get-center-server-details', async (req, res) => {
     });
 
     if (rowsSelAutoFeed.length === 0) {
-      return res.status(404).json({ message: "No data found in autofeed table" });
+      return res
+        .status(404)
+        .json({ message: "No data found in autofeed table" });
     }
 
     // Prepare result
@@ -5722,7 +5804,7 @@ app.get('/get-center-server-details', async (req, res) => {
       center_code: rowsSelAutoFeed[0].center_code,
       serverno: rowsSelAutoFeed[0].serverno,
     };
-  // console.log(result);
+    // console.log(result);
     res.json(result); // Send result as JSON response
   } catch (error) {
     console.error("Error fetching center and server details:", error);
@@ -5730,7 +5812,7 @@ app.get('/get-center-server-details', async (req, res) => {
   }
 });
 
-app.get('/get-exam-details', async (req, res) => {
+app.get("/get-exam-details", async (req, res) => {
   const selExam = "select exam_code,exam_name from iib_exam";
 
   try {
@@ -5745,7 +5827,9 @@ app.get('/get-exam-details', async (req, res) => {
     });
 
     if (rowsExam.length === 0) {
-      return res.status(404).json({ message: "No data found in iib_exam table" });
+      return res
+        .status(404)
+        .json({ message: "No data found in iib_exam table" });
     }
 
     // Prepare result
@@ -5753,7 +5837,7 @@ app.get('/get-exam-details', async (req, res) => {
       exam_code: rowsExam[0].exam_code,
       exam_name: rowsExam[0].exam_name,
     };
-  // console.log(result);
+    // console.log(result);
     res.json(result); // Send result as JSON response
   } catch (error) {
     console.error("Error fetching exam details:", error);
@@ -5765,7 +5849,6 @@ const session = {
   ta_override: "N",
   mc: "EN", // Example medium code from session
 };
-
 
 app.get("/medium-settings/:SubjectCode", (req, res) => {
   const { SubjectCode } = req.params;
@@ -5787,7 +5870,9 @@ app.get("/medium-settings/:SubjectCode", (req, res) => {
 
     if (sublanguagesResult.length === 0) {
       console.warn("No languages found for the provided subject code.");
-      res.status(404).send("No languages found for the specified subject code.");
+      res
+        .status(404)
+        .send("No languages found for the specified subject code.");
       return;
     }
 
@@ -5854,6 +5939,888 @@ app.get("/medium-settings/:SubjectCode", (req, res) => {
 });
 /*sethu*/
 
+app.get("/ontheflyqpgen/", async (req, res) => {
+  const { membershipNo, examCode, subjectCode, medium, totalMarks } = req.query;
+  let iCount = 1;
+  let memTicketno;
+  // console.log(membershipNo,subjectCode)
+  try {
+    const getMemTicketNo = async (memNo, subjectCode) => {
+      console.log;
+      const query =
+        "SELECT a.address3 as memTicketNo, c.slot_no as slotNo FROM iib_candidate a JOIN iib_candidate_iway b  ON a.membership_no = b.membership_no JOIN iib_exam_slots c ON c.slot_time = b.exam_time where a.membership_no= ? and b.subject_code= ?";
+
+      return new Promise((resolve, reject) => {
+        db.query(query, [memNo, subjectCode], (err, result) => {
+          if (err) {
+            console.error("Database query failed:", err);
+            return reject(
+              res.status(500).send("Database query error : getMemTicketNo")
+            );
+          }
+
+          return resolve({
+            memTicketNo: result[0].memTicketNo,
+            slotNo: result[0].slotNo,
+          });
+        });
+      });
+    };
+    const gettingQPStructure = async (subjectCode) => {
+      const qpStructureQry =
+        "SELECT exam_code, subject_code, section_code, marks, sum(no_of_questions) as no_of_questions, case_id FROM iib_qp_weightage WHERE subject_code = ? group by 1,2,3,4";
+      return new Promise((resolve, reject) => {
+        db.query(qpStructureQry, [subjectCode], (err, res) => {
+          // console.log("helo grom gettingQPStrucure")
+          if (err) {
+            console.error("Database query failed:", err);
+            return reject(
+              res.status(500).send("Database query error : qpStructureQry")
+            );
+          }
+          return resolve({ qpStructureLength: res.length, qpStructures: res });
+        });
+      });
+    };
+    const getAnswerShuffling = async (subjectCode) => {
+      const getAnswerShufflingquery =
+        "select answer_shuffling from iib_exam_subjects where subject_code = ?";
+      return new Promise((resolve, reject) => {
+        db.query(getAnswerShufflingquery, [subjectCode], (err, result) => {
+          if (err) {
+            console.error("Database query failed:", err);
+            return reject(
+              res
+                .status(500)
+                .send("Database query error : getAnswerShufflingquery")
+            );
+          }
+          return resolve(result[0].answer_shuffling);
+        });
+      });
+    };
+    const insertingInQPTable = async (
+      questionPaperNo,
+      examCode,
+      subjectCode,
+      totalMarks,
+      isSample,
+      medium
+    ) => {
+      console.log(questionPaperNo)
+      let choosenMedium;
+      if (medium == "EN") {
+        choosenMedium = "E";
+      } else {
+        choosenMedium = "H";
+      }
+      try {
+        const insertingInQPTableQry =
+          "INSERT INTO iib_question_paper (question_paper_no,exam_code,subject_code,total_marks,sample,enabled,online,assigned,medium_code) VALUES (?,?,?,?,?,'Y','Y','N',?)";
+        return new Promise((resolve, reject) => {
+          db.query(
+            insertingInQPTableQry,
+            [
+              questionPaperNo,
+              examCode,
+              subjectCode,
+              totalMarks,
+              isSample,
+              choosenMedium,
+            ],
+            (err, res) => {
+              if (err) {
+                console.error("Database query failed:", err);
+                return reject(
+                  new Error(
+                    "Database query error: Insert on iib_question_paper failed"
+                  )
+                );
+              }
+              return resolve(res.affectedRows);
+            }
+          );
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    const gettingQuesID = async (
+      examCode,
+      subjectCode,
+      sectionCode,
+      sectionMarks,
+      questionCount
+    ) => {
+      // console.log(examCode,
+      //   subjectCode,
+      //   sectionCode,
+      //   sectionMarks,
+      //   questionCount)
+      const gettingQuesIDQuery =
+        "SELECT question_id, question_code FROM iib_sq_details WHERE exam_code= ? AND subject_code= ? AND section_code= ? AND  marks= ? ORDER BY rand() LIMIT ?";
+      return new Promise((resolve, reject) => {
+        db.query(
+          gettingQuesIDQuery,
+          [examCode, subjectCode, sectionCode, sectionMarks, questionCount],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send("Database query error : gettingQuesIDQuery -  failed")
+              );
+            }
+            // console.log(result)
+            return resolve(result);
+          }
+        );
+      });
+    };
+
+    const gettingCaseIdQuestions = async (
+      examCode,
+      subjectCode,
+      sectionCode,
+      sectionMarks
+    ) => {
+      const gettingCaseIdQuestionsQuery =
+        "SELECT  case_id from iib_qp_weightage where exam_code=? AND subject_code=? AND section_code= ? AND marks=?";
+      return new Promise((resolve, reject) => {
+        db.query(
+          gettingCaseIdQuestionsQuery,
+          [examCode, subjectCode, sectionCode, sectionMarks],
+          (err, res) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              res
+                .status(500)
+                .send("Database query error : gettingQuesIDQuery -  failed");
+              return reject();
+            }
+            const getCaseCount = res.length;
+            const result = queryAsync(
+              "SELECT  case_id from iib_sc_details where exam_code=? AND subject_code= ? AND section_code= ? AND case_marks= ? ORDER BY rand() LIMIT ?",
+              [examCode, subjectCode, sectionCode, sectionMarks, getCaseCount]
+            );
+            return resolve(result);
+          }
+        );
+      });
+    };
+    const getQuestCaseSecCode = async (examCode, subjectCode, listCaseID) => {
+      const getQuestCaseSecCodequery = ` SELECT question_id,case_id,section_code from iib_sq_details where exam_code= ? and subject_code=? and case_id IN (${listCaseID})`;
+      return new Promise((resolve, reject) => {
+        db.query(
+          getQuestCaseSecCodequery,
+          [examCode, subjectCode, listCaseID],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send(
+                    "Database query error : getQuestCaseSecCodequery -  failed"
+                  )
+              );
+            }
+            return resolve(result);
+          }
+        );
+      });
+    };
+    const getCaseDetails = async (examCode, subjectCode, listCaseID) => {
+      const getCaseDetailsquery = `SELECT a.case_id as case_id,sum(a.marks) as total_marks ,count(1) as qpcount,a.section_code as section_code,b.sub_section_code as sub_section_code ,b.difficulty as difficulty from iib_sq_details a, iib_sc_details b where a.exam_code= ? and a.exam_code=b.exam_code and a.subject_code=? and a.subject_code=b.subject_code and a.case_id=b.case_id and a.case_id IN (${listCaseID}) group by a.case_id`;
+      return new Promise((resolve, reject) => {
+        db.query(
+          getCaseDetailsquery,
+          [examCode, subjectCode, listCaseID],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send("Database query error : getCaseDetailsquery -  failed")
+              );
+            }
+            return resolve(result);
+          }
+        );
+      });
+    };
+    const getQuesCaseIds = async (
+      examCode,
+      subjectCode,
+      csectionCode,
+      caseid
+    ) => {
+      // console.log(examCode,subjectCode,csectionCode,caseid)
+      const getQuesCaseIdsquery =
+        "SELECT question_id as questionID, case_id as caseID,marks as sectionMarks FROM iib_sq_details WHERE exam_code= ? AND subject_code= ? AND section_code= ? AND case_id = ?";
+      return new Promise((resolve, reject) => {
+        db.query(
+          getQuesCaseIdsquery,
+          [examCode, subjectCode, csectionCode, caseid],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send("Database query error : getQuesCaseIdsquery -  failed")
+              );
+            }
+            return resolve(result);
+          }
+        );
+      });
+    };
+    const getOptions = async (
+      examCode,
+      subjectCode,
+      sectionCode,
+      questionID
+    ) => {
+      const getOptionsquery =
+        "SELECT option_1, option_2, option_3, option_4, option_5 FROM iib_sq_details WHERE exam_code= ? AND subject_code= ? AND section_code= ? AND question_id= ?";
+      return new Promise((resolve, reject) => {
+        db.query(
+          getOptionsquery,
+          [examCode, subjectCode, sectionCode, questionID],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send("Database query error : getQuesCaseIdsquery -  failed")
+              );
+            }
+            // console.log(result[0])
+            return resolve(result);
+          }
+        );
+      });
+    };
+    const getShufflingQuestionType = async (
+      examCode,
+      subjectCode,
+      sectionCode,
+      questionID
+    ) => {
+    
+      const getShufflingQuestionTypequery =
+        "SELECT shuffling ,question_type FROM iib_sq_details WHERE exam_code= ? AND subject_code= ? AND section_code= ? AND question_id= ?";
+      return new Promise((resolve, reject) => {
+        db.query(
+          getShufflingQuestionTypequery,
+          [examCode, subjectCode, sectionCode, questionID],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send(
+                    "Database query error : getShufflingQuestionTypequery -  failed"
+                  )
+              );
+            }
+            // console.log(result)
+            return resolve(result);
+          }
+        );
+      });
+    };
+    const insertIntoQPDetails = async (
+      query
+    ) => {
+      return new Promise((resolve, reject) => {
+        db.query(
+          query,
+          [],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send(
+                    "Database query error : getShufflingQuestionTypequery -  failed"
+                  )
+              );
+            }
+            return resolve(result.affectedRows);
+          }
+        );
+      });
+    };
+    const updateMemInQP = async (
+      updateMemInQPquery,
+      membershipNo,
+      questionPaperNo
+    ) => {
+      // console.log(updateMemInQPquery,
+      //   membershipNo,
+      //   questionPaperNo)
+      return new Promise((resolve, reject) => {
+        db.query(
+          updateMemInQPquery,
+          [membershipNo, questionPaperNo],
+          (err, result) => {
+            if (err) {
+              console.error("Database query failed:", err);
+              return reject(
+                res
+                  .status(500)
+                  .send("Database query error : updateMemInQPquery -  failed")
+              );
+            }
+            console.log(result)
+            return resolve(result.affectedRows);
+          }
+        );
+      });
+    };
+    const shuffleArray = (array)=> {
+      for (let i = array.length - 1; i > 0; i--) {
+          let j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+      }
+      // return array;
+  }
+    const { memTicketNo, slotNo } = await getMemTicketNo(
+      membershipNo,
+      subjectCode
+    );
+    // console.log(memTicketNo, slotNo);
+    const memshipNoTicketNo = memTicketNo.split(":");
+    memTicketno = slotNo + memshipNoTicketNo[1].trim();
+    const questionPaperNo = memTicketno;
+    console.log(questionPaperNo.length)
+// console.log(memshipNoTicketNo,questionPaperNo);
+    const { qpStructureLength, qpStructures } =
+      await gettingQPStructure(subjectCode);
+
+    const answershuffling = await getAnswerShuffling(subjectCode);
+
+    if (qpStructureLength == 0) {
+      console.error("QP weightage structure is not there");
+      return res.status(500).send("Database query error : qpStructureQry");
+    } else {
+      if (totalMarks == "") {
+        totalMarks = 0;
+      }
+
+      const resultInsertingQPTable = await insertingInQPTable(
+        questionPaperNo,
+        examCode,
+        subjectCode,
+        totalMarks,
+        "N",
+        medium
+      );
+      // console.log(resultInsertingQPTable)
+      if (resultInsertingQPTable != 0) {
+        console.log("inserted into iib_question_paper");
+      }
+
+      let aAllQuestions = [];
+      let aQuestions = [];
+      let arrcasequestionID = [];
+      let count = 0;
+
+      let examCodeOfQPStructure,
+        subjectCodeOfQPStructure,
+        sectionCode,
+        sectionMarks,
+        questionID,
+        questionCode,
+        questionCount;
+      for (const qpStructure of qpStructures) {
+        examCodeOfQPStructure = qpStructure.exam_code;
+        subjectCodeOfQPStructure = qpStructure.subject_code;
+        sectionCode = qpStructure.section_code;
+        sectionMarks = qpStructure.marks;
+        questionCount = qpStructure.no_of_questions;
+        sectionType = qpStructure.case_id;
+        // console.log(examCodeOfQPStructure,subjectCodeOfQPStructure,sectionCode,sectionMarks,questionCount,typeof sectionType)
+        if (sectionType == null || sectionType == "NULL") {
+          const questionIdCodes = await gettingQuesID(
+            examCodeOfQPStructure,
+            subjectCodeOfQPStructure,
+            sectionCode,
+            sectionMarks,
+            questionCount
+          );
+          // console.log(questionIdCodes);
+          if (questionIdCodes.length > 0) {
+            questionIdCodes.forEach((questionIdCode) => {
+              questionID = questionIdCode.question_id;
+              questionCode = questionIdCode.question_code;
+              // console.log(questionID, questionCode)
+              if (!aQuestions[questionID]) {
+                aQuestions[questionID] = [[], [], [], []];
+              }
+              // console.log(aQuestions)  ;
+              aQuestions[questionID][0].push(questionID);
+              aQuestions[questionID][1].push(sectionCode);
+              aQuestions[questionID][2].push(sectionMarks);
+              aQuestions[questionID][3].push(0);
+              // console.log("asdf",aQuestions);
+              // aAllQuestions[count] = [];
+              if (!aAllQuestions[count]) {
+                aAllQuestions[count] = [[], [], []];
+              }
+              aAllQuestions[count][0].push(questionID);
+              aAllQuestions[count][1].push(questionID);
+              aAllQuestions[count][2].push(0);
+              count++;
+            });
+          }
+        } //section type 'G' if ends here
+        // console.log(aAllQuestions);
+        if (sectionType != null || sectionType != "NULL") {
+          const caseIdQuestions = await gettingCaseIdQuestions(
+            examCodeOfQPStructure,
+            subjectCodeOfQPStructure,
+            sectionCode,
+            sectionMarks
+          );
+          // console.log(caseIdQuestions);
+          for (const caseIdQuestion of caseIdQuestions) {
+            // arrcasequestionID[sectionCode]=[];
+            if (!Array.isArray(arrcasequestionID[sectionCode])) {
+              arrcasequestionID[sectionCode] = [];
+            }
+            arrcasequestionID[sectionCode].push(caseIdQuestion.case_id);
+          }
+          // console.log("arrcasequestionID",arrcasequestionID)
+        } //section type 'C' if ends here
+      }
+
+      let listCaseIDArr = [];
+      let arrcasecnt = arrcasequestionID.length;
+      arrcasequestionID.forEach((arcaskey) => {
+        // console.log(arcaskey);
+        // Check if the current value is a non-empty array
+        if (Array.isArray(arcaskey) && arcaskey.length > 0) {
+          // Merge the current array into listCaseIDArr
+          listCaseIDArr = listCaseIDArr.concat(arcaskey);
+        }
+      });
+
+      let listCaseID;
+      let arrcaseID;
+      let arrCqid = [];
+      let arrCase = [{}];
+      let arrSecCase = [[], []];
+      let allIDs = [];
+      //  console.log(listCaseIDArr)
+      if (listCaseIDArr.length > 0) {
+        listCaseID = listCaseIDArr.join(",");
+        arrcaseID = listCaseID.split(",");
+
+        const questCaseSecCodeValues = await getQuestCaseSecCode(
+          examCodeOfQPStructure,
+          subjectCodeOfQPStructure,
+          listCaseID
+        );
+        // console.log(questCaseSecCodeValues)
+
+        for (const questCaseSecCodeValue of questCaseSecCodeValues) {
+          const caseId = questCaseSecCodeValue.case_id;
+          const sectionCode = questCaseSecCodeValue.section_code;
+          const questionId = questCaseSecCodeValue.question_id;
+
+          // Ensure arrCqid[caseId] is initialized as an array
+          if (!Array.isArray(arrCqid[caseId])) {
+            arrCqid[caseId] = [];
+          }
+
+          // Append or update the array with the question_id
+          if (arrCqid[caseId].length > 0) {
+            arrCqid[caseId].push(`${arrCqid[caseId].join(",")},${questionId}`);
+          } else {
+            arrCqid[caseId].push(questionId);
+          }
+
+          // Ensure arrSecCase[sectionCode] is initialized
+          if (!arrSecCase[sectionCode]) {
+            arrSecCase[sectionCode] = {};
+          }
+
+          // Ensure arrSecCase[sectionCode][caseId] is initialized as an array
+          if (!Array.isArray(arrSecCase[sectionCode][caseId])) {
+            arrSecCase[sectionCode][caseId] = [];
+          }
+
+          // Add the question_id to the section-case mapping
+          arrSecCase[sectionCode][caseId].push(questionId);
+        }
+
+        // console.log("arrcqid" + arrCqid)
+        const caseDetails = await getCaseDetails(
+          examCodeOfQPStructure,
+          subjectCodeOfQPStructure,
+          listCaseID
+        );
+        // console.log(caseDetails);
+        for (const caseDetail of caseDetails) {
+          const caseId = caseDetail.case_id;
+          // Ensure arrCase[caseId] is initialized as an object
+          if (!arrCase[caseId]) {
+            arrCase[caseId] = {
+              marks: "",
+              questionscount: "",
+              sectioncode: "",
+              subsectioncode: "",
+              priority: "",
+            };
+          }
+
+          // Populate the arrays within arrCase[caseId]
+          arrCase[caseId].marks = caseDetail.total_marks;
+          arrCase[caseId].questionscount = caseDetail.qpcount;
+          arrCase[caseId].sectioncode = Number(caseDetail.section_code);
+          arrCase[caseId].subsectioncode = caseDetail.sub_section_code;
+          arrCase[caseId].priority = caseDetail.difficulty;
+        }
+        // console.log("arrCase" + JSON.stringify(arrCase))
+
+        // console.log("arrCase" + arrCase)
+        let caseid, csectionCode, csubSectionCode, cpriority;
+
+        let caseCnt;
+        // console.log(arrcaseID)
+        for (let i = 0; i < arrcaseID.length; i++) {
+          caseid = arrcaseID[i];
+          csectionCode = arrCase[caseid].sectioncode;
+          csubSectionCode = arrCase[caseid].subsectioncode;
+          cpriority = arrCase[caseid].priority;
+
+          const quesCaseIds = await getQuesCaseIds(
+            examCodeOfQPStructure,
+            subjectCodeOfQPStructure,
+            csectionCode,
+            caseid
+          );
+          // console.log(quesCaseIds)
+
+          if (quesCaseIds.length > 0) {
+            // Initialize allIDs if it is not already defined
+            let allIDs = [];
+            let first = 0,
+              firstID = null;
+            caseCnt = count;
+
+            // Iterate over each quesCaseId in quesCaseIds
+            quesCaseIds.forEach((quesCaseId) => {
+              if (first == 0) {
+                first = 1;
+                firstID = quesCaseId.questionID; // Set the first questionID
+              }
+
+              // Initialize aQuestions[quesCaseId.questionID] if not already initialized
+              if (!aQuestions[quesCaseId.questionID]) {
+                aQuestions[quesCaseId.questionID] = [[], [], [], [], [], []];
+              }
+              // console.log(first,firstID)
+              // console.log(quesCaseId);
+              // Populate the arrays within aQuestions[quesCaseId.questionID]
+              aQuestions[quesCaseId.questionID][0].push(quesCaseId.questionID);
+              aQuestions[quesCaseId.questionID][1].push(csectionCode);
+              aQuestions[quesCaseId.questionID][2].push(quesCaseId.sectionMarks);
+              aQuestions[quesCaseId.questionID][3].push(quesCaseId.caseID);
+              aQuestions[quesCaseId.questionID][4].push(csubSectionCode);
+              aQuestions[quesCaseId.questionID][5].push(cpriority);
+              // console.log(aQuestions)
+              // Add the questionID to allIDs
+              allIDs.push(quesCaseId.questionID);
+              caseCnt++;
+            });
+              // console.log(aQuestions)
+            allIDs.sort((a, b) => a - b);
+// console.log(allIDs);
+            let strAllIDs = allIDs.join(",");
+            if (!aAllQuestions[count]) {
+              aAllQuestions[count] = [[], [], []];
+            }
+            // Store the results in aAllQuestions
+            aAllQuestions[count][0].push(firstID);
+            aAllQuestions[count][1].push(strAllIDs);
+            aAllQuestions[count][2].push(quesCaseIds[0].caseID);
+            // Increment the counter
+            count++;
+            first = 0;
+          }
+        }
+        // console.log(aAllQuestions)
+       
+        let nQuestions = aQuestions.length;
+        let nQs = aAllQuestions.length;
+        let questionID;
+        let strQuestionIDs, actualCnt, actualRandQuestions, caseIndex;
+        let sectionCode, sectionMarks, caseID, strOptOrder,ansshuffle=0;
+
+        let aRandQuestions = [...Array(nQs).keys()]; // [0, 1, 2, ..., nQs-1]
+        // Step 2: Shuffle the array (like shuffle)
+        for (let i = aRandQuestions.length - 1; i > 0; i--) {
+          let j = Math.floor(Math.random() * (i + 1));
+          [aRandQuestions[i], aRandQuestions[j]] = [aRandQuestions[j], aRandQuestions[i]];
+        }
+          // console.log(aRandQuestions);
+        let index;
+        let insertIntoQPDetailsquery = "";
+        for (let qCount = 0; qCount < nQs; qCount++) {
+          qCount + 1;
+          if (Array.isArray(aRandQuestions)) {
+            index = aRandQuestions[qCount];
+          } else {
+            index = aRandQuestions;
+          }
+          // console.log(index);
+          let actualQuestions = [];
+          // console.log(aAllQuestions);
+          strQuestionIDs = aAllQuestions[index][1].toString();
+          actualQuestions = strQuestionIDs.split(",");
+          // console.log(actualQuestions);
+
+          if (Array.isArray(actualQuestions)) {
+            actualCnt = actualQuestions.length;
+            // Randomization in JavaScript
+            shuffleArray(actualQuestions); // Shuffle the array in place
+// Step 4: Select the first `actualCnt` elements (which would be the entire array)
+            actualRandQuestions = actualQuestions.slice(0, actualCnt);
+              // console.log(actualRandQuestions + "random")
+          } else {
+            actualCnt = 1;
+          }
+          for (let cntIDs = 0; cntIDs < actualCnt; cntIDs++) {
+            if (Array.isArray(actualRandQuestions)) {
+              caseIndex = actualRandQuestions[cntIDs];
+              // console.log(caseIndex);
+            } else {
+              caseIndex = actualRandQuestions;
+              // console.log(caseIndex)
+            }
+            if (Array.isArray(actualQuestions)) {
+              questionID = actualQuestions[cntIDs];
+              // console.log("questionID"+questionID)
+            } else {
+              questionID = actualQuestions;
+              // console.log(questionID)
+
+            }
+            if (questionID != "") {
+              sectionCode = aQuestions[questionID][1];
+              sectionMarks = aQuestions[questionID][2];
+              caseID = aQuestions[questionID][3];
+              strOptOrder = "";
+
+              const options = await getOptions(
+                examCodeOfQPStructure,
+                subjectCodeOfQPStructure,
+                sectionCode,
+                questionID
+              );
+              // console.log(options)
+              let input = [];
+              let rand_keys = [];
+
+              // console.log(options);
+              for (let optCnt = 1; optCnt <= 5; optCnt++) {
+                let optionKey = `option_${optCnt}`; // Creates option_1, option_2, etc.
+                // console.log(options[0][optionKey].length); // Accessing the property dynamically
+            
+                if (options[0][optionKey].length > 0) {
+                    input[optCnt] = optCnt;
+                }
+              }
+            // console.log(input);
+            rand_keys = [...Array(input.length).keys()];
+            // console.log(rand_keys)
+              if (answershuffling == "Y") {
+                shuffleArray(rand_keys);
+              }
+              // console.log(rand_keys);
+              // console.log( examCodeOfQPStructure,
+              //   subjectCodeOfQPStructure,
+              //   sectionCode,
+              //   questionID)
+              const shufflingQuestionTypes = await getShufflingQuestionType(
+                examCodeOfQPStructure,
+                subjectCodeOfQPStructure,
+                sectionCode,
+                questionID
+              );
+              // console.log(shufflingQuestionTypes)
+              for (const shufflingQuestionType of shufflingQuestionTypes) {
+                if (
+                  shufflingQuestionType.question_type == "N" ||
+                  shufflingQuestionType.question_type == "R"
+                ) {
+                  strOptOrder = "";
+                } else {
+                  if (ansshuffle == "2") {
+                    strOptOrder = "1,2,3,4,5";
+                  } else {
+                    if (shufflingQuestionType.shuffling == "Y") {
+                      // console.log("helo")
+                      strOptOrder = rand_keys.join(",");
+                    } else {
+                      strOptOrder = "1,2,3,4,5";
+                    }
+                  }
+                  // console.log(strOptOrder)
+                }
+                if (insertIntoQPDetailsquery == "") {
+                  // console.log("inside"+questionPaperNo)
+                  insertIntoQPDetailsquery =
+                    `INSERT INTO iib_question_paper_details (question_paper_no, subject_code, section_code, question_id, answer_order, display_order,case_id,updated_time) VALUES (${questionPaperNo}, ${subjectCodeOfQPStructure}, ${sectionCode}, ${questionID}, '${strOptOrder}', ${iCount}, ${caseID},now())`;
+                } else {
+                  insertIntoQPDetailsquery += `,(${questionPaperNo}, ${subjectCodeOfQPStructure}, ${sectionCode}, ${questionID}, '${strOptOrder}', ${iCount}, ${caseID},now())`;
+                }
+                iCount++;
+              }
+            }
+          }
+        }
+        // console.log(questionPaperNo);
+        // console.log(insertIntoQPDetailsquery);
+        const insertIntoQPDetail = await insertIntoQPDetails(
+          insertIntoQPDetailsquery,
+        );
+        if (insertIntoQPDetail <= 0) {
+          return false;
+        }
+        insertIntoQPDetailsquery = "";
+
+        const updateMemInQPquery =
+          "UPDATE iib_question_paper SET complete='Y', assigned='Y', membership_no= ? WHERE question_paper_no= ?";
+
+        const updateMemNoInQP = await updateMemInQP(updateMemInQPquery,
+          membershipNo,
+          questionPaperNo,
+        );
+        if (updateMemNoInQP <= 0) {
+          return false;
+        }
+      }
+      return res.json({question_paper_no: questionPaperNo});
+    }
+  
+  } catch (err) {
+    console.error("Error while generating question paper");
+    return res.status(500).send("Error while generating question paper");
+  }
+});
+
+const csvUpload = multer({
+  dest: "uploads/", // Temporary upload directory
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== ".csv") {
+      return cb(new Error("Only CSV files are allowed"));
+    }
+    cb(null, true);
+  },
+});
+
+// Endpoint: /scannerUpload
+app.post("/scannerUpload", csvUpload.single("userFile"), async (req, res) => {
+  const uploadedFile = req.file;
+
+  if (!uploadedFile) {
+    return res
+      .status(400)
+      .json({ message: "File not found or invalid format" });
+  }
+
+  const newFilePath = path.resolve("C:/pro/itest/activate/scan_input.csv");
+
+  try {
+    // Read file contents
+    const data = fs.readFileSync(uploadedFile.path, "utf8").split("\n");
+    const old_ip_array = data.map((line) => line.split(",")[0].trim());
+
+    // Validate each IP address
+    const invalidIP = old_ip_array.find(
+      (ip) =>
+        !/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(
+          ip
+        )
+    );
+
+    if (invalidIP) {
+      return res
+        .status(400)
+        .json({ message: `Invalid IP found in file: ${invalidIP}` });
+    }
+
+    // Move the uploaded file to the desired location with the correct filename
+    fs.renameSync(uploadedFile.path, newFilePath);
+
+    return res.json({ message: "File uploaded and processed successfully!" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Error processing the file." });
+  } finally {
+    // Clean up the temporary file if it still exists
+    if (fs.existsSync(uploadedFile.path)) {
+      fs.unlinkSync(uploadedFile.path);
+    }
+  }
+});
+
+app.get("/examSettings", (req, res) => {
+  const { variable } = req.query;
+  console.log(variable);
+  const query =
+    "select variable_value from exam_settings where variable_name = ? ";
+
+  db.query(query, [variable], (err, result) => {
+    if (err) {
+      console.error("Database query failed:", err);
+      return res
+        .status(500)
+        .send(
+          "Database query error : gettingVariableValue from exam_settings table -  failed"
+        );
+    }
+    console.log(result[0]);
+    return res.json({ value: result[0].variable_value });
+  });
+});
+
+app.post("/updateExamSettings", (req, res) => {
+  const { variable, value } = req.body;
+  console.log(variable, value);
+  const query =
+    "update exam_settings set variable_value = ? where variable_name = ? ";
+  db.query(query, [value, variable], (err, result) => {
+    if (err) {
+      console.error("Database query failed:", err);
+      return res
+        .status(500)
+        .send(
+          "Database query error : updatingVariableValue from exam_settings table -  failed"
+        );
+    }
+    console.log(result[0]);
+    if (result.affectedRows > 0) {
+      if (value == "Y") {
+        return res.json({ returnValue: "Enabled" });
+      }
+      if (value == "N") {
+        return res.json({ returnValue: "Disabled" });
+      }
+    }
+  });
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

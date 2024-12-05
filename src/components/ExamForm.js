@@ -100,10 +100,12 @@ const handleSwitchControl=()=>{
   useEffect(() => {
     // Retrieve data from sessionStorage
     const userAuthData = sessionStorage.getItem("candidateInfo");
+    // console.log(userAuthData)
     // alert(userAuthData);
     if (userAuthData) {
       try {
         const parsedData = JSON.parse(userAuthData);
+        // console.log(parsedData)
         if (parsedData && parsedData.user) {
           setCandidateInfo({
             user: parsedData.user,
@@ -124,7 +126,8 @@ const handleSwitchControl=()=>{
             encryptKey: parsedData.encryptKey,
             pass_mark: parsedData.pass_mark,
           });
-
+          // console.log("inside examfor,")
+          // console.log(candidateInfo);
           // console.log('parsed subject dur', parsedData.subject_duration);
           const durationInSeconds = parsedData.subject_duration; // Convert minutes to seconds
           // setTimer(durationInSeconds);
@@ -220,6 +223,7 @@ const handleSwitchControl=()=>{
   useEffect(() => {
     const fetchSelQuestions = async () => {
       try {
+        // console.log(candidateInfo.question_paper_no)
         const medium = sessionStorage.getItem("candidate-medium") || "EN";
         const response = await fetch(
           `http://localhost:5000/questions/${candidateInfo.question_paper_no}/${candidateInfo.encryptKey}/${medium}`
